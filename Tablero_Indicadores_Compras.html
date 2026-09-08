@@ -500,7 +500,7 @@ footer strong { color: rgba(255,255,255,0.8); }
       </div>
     </div>
   </div>
-  <div class="chart-grid-2">
+  <div class="chart-grid-3">
     <div class="chart-card">
       <div class="card-title">7. Top 10 Ítems por Valor de Compra</div>
       <div class="card-sub">Ítems con mayor impacto en el presupuesto</div>
@@ -510,6 +510,11 @@ footer strong { color: rgba(255,255,255,0.8); }
       <div class="card-title">19. Gasto de Compras por Centro / Bodega</div>
       <div class="card-sub">Top 10 destinos del presupuesto de compras</div>
       <div class="chart-wrap" style="height:280px"><canvas id="ch-top-bodegas-resumen"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">20. Gasto de Compras por Tipo de Producto</div>
+      <div class="card-sub">Distribución del presupuesto por categoría de producto</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="ch-top-tipo-resumen"></canvas></div>
     </div>
   </div>
 
@@ -1884,6 +1889,47 @@ function renderTopBodegasResumen() {
   });
 }
 
+// Gasto por Tipo de Producto (agrupa FILTER.topItems via ITEM_TIPO); respeta
+// filtros de Ano/Mes (via monthly[]) y Bodega (via BODEGA_MASTER.hist.itemMonthly),
+// igual que filteredTopList().
+function getTipoSpendList() {
+  const idxs = dateIdxs();
+  const byTipo = {};
+  TIPO_NAMES.forEach(t => { byTipo[t] = 0; });
+  if (filterBodegas.length) {
+    const cross = BODEGA_MASTER.hist.itemMonthly;
+    FILTER.topItems.forEach(it => {
+      const tipo = ITEM_TIPO[it.name] || 'Otros';
+      let v = 0;
+      filterBodegas.forEach(bod => { const arr = cross[bod] && cross[bod][it.name]; if (arr) v += sumIdxs(arr, idxs); });
+      byTipo[tipo] += v;
+    });
+  } else {
+    FILTER.topItems.forEach(it => {
+      const tipo = ITEM_TIPO[it.name] || 'Otros';
+      const v = idxs.length ? idxs.reduce((acc,i) => acc + (it.monthly[i]||0), 0) : it.total;
+      byTipo[tipo] += v;
+    });
+  }
+  return TIPO_NAMES.map(t => [t, Math.round(byTipo[t]*10)/10]).sort((a,b) => b[1]-a[1]);
+}
+
+// 20. Gasto de Compras por Tipo de Producto
+function renderTopTipoResumen() {
+  destroyChart('ch-top-tipo-resumen');
+  const td = getTipoSpendList();
+  charts['ch-top-tipo-resumen'] = new Chart(document.getElementById('ch-top-tipo-resumen'), {
+    type: 'bar',
+    data: { labels: td.map(x => x[0]),
+      datasets: [{ label: 'Gasto (M COP)', data: td.map(x => x[1]),
+        backgroundColor: td.map((x,i) => filterTipos.length ? (filterTipos.includes(x[0]) ? COLORS.wine : '#D8CFC9') : PALETTE[i % PALETTE.length]), borderRadius: 4 }] },
+    options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: false },
+      tooltip: { ...TOOLTIP_BASE, callbacks: { label: c => fmt(c.raw) } } },
+      scales: { ...baseOpts.scales, y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => '$'+v+'M' } } } }
+  });
+}
+
+
 // Detalle línea a línea de Lead Time: fecha solicitada (creación OC), fecha esperada
 // (prometida) y fecha real de llegada — respeta los mismos filtros globales
 // (proveedor/ítem/bodega/período) que el resto del tablero, combinados con AND.
@@ -2062,7 +2108,7 @@ function renderVentasCompras() {
 
 function renderResumenTab() {
   renderKPIs(); renderInsights();
-  renderMensual(); renderTopProvResumen(); renderTopItemsResumen(); renderTopBodegasResumen();
+  renderMensual(); renderTopProvResumen(); renderTopItemsResumen(); renderTopBodegasResumen(); renderTopTipoResumen();
   renderVentasCompras();
   renderLeadTimeResumen(); renderComparativoAnualTabla();
 }
