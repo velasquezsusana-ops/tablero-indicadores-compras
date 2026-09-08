@@ -1,0 +1,7 @@
+60579: ═══════════════ | const D = { |   monthlySpend: {"2025-01":1763.7,"2025-02":1698.0,"2025-03":1835.5,"2025-04":2004.8,"2025-05":1876.9,"2025-06":1854.5,"20
+3745638: nst months    = Object.keys(D.monthlySpend); | const monthsLbl = months.map(m => { const [y,mo] = m.split('-'); return ['','Ene','Feb','Mar','Abr','May'
+3752722: eries(ctxs) : Object.values(D.monthlySpend); | } | function getMonthlySeries() { |   return displaySeries(getRawSpendSeries()); | } | function getActiveInfo() {
+3767916: onthlyVals = Object.entries(D.monthlySpend); |   const peak = monthlyVals.reduce((a,b) => b[1] > a[1] ? b : a); |   const peakLbl = monthsLbl[months.index
+3768140: ).reduce((acc, m) => acc + (D.monthlySpend[m]||0), 0); |   bullets.push(`<strong>Inversión total del período:</strong> ${fmtB(totalPeriodo)} en ${D.tota
+3788376: t(2,'0')}`; |     const v25 = D.monthlySpend[k25]; |     const v26 = D.monthlySpend[k26]; |     const oc25 = PRICE_DATA.ocCountByMonth[k25]; |     const oc26 
+3788413: Spend[k25]; |     const v26 = D.monthlySpend[k26]; |     const oc25 = PRICE_DATA.ocCountByMonth[k25]; |     const oc26 = PRICE_DATA.ocCountByMonth[k26]; |    
