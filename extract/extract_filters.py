@@ -66,7 +66,7 @@ print(f"  Filas procesadas: {n}")
 print(f"  Proveedores distintos: {len(supplier_spend)}")
 print(f"  Items distintos: {len(item_spend)}")
 
-TOP_N = 30
+TOP_N = 100000  # sin limite real: se incluyen todos los proveedores/items (215/636 en la base actual)
 
 def top_n_names(d, n=TOP_N):
     return [k for k,_ in sorted(d.items(), key=lambda x: -x[1])[:n]]
