@@ -220,6 +220,26 @@ main { padding: 2rem; max-width: 1600px; margin: 0 auto; }
 .card-note { font-size: 0.68rem; color: var(--gold); margin-top: 0.6rem; font-style: italic; }
 .chart-wrap { position: relative; width: 100%; }
 
+/* ── PRODUCTOS CON MÁS INCUMPLIMIENTO (por tipo) ── */
+.v-prod-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+@media (max-width: 1100px) { .v-prod-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px)  { .v-prod-grid { grid-template-columns: 1fr; } }
+.v-prod-card {
+  background: #fff; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+  padding: 1rem 1rem 1.1rem; display: flex; flex-direction: column;
+}
+.v-prod-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: .7rem; padding-bottom: .55rem; border-bottom: 2px solid var(--wine-pale);
+}
+.v-prod-card-title {
+  font-size: .74rem; font-weight: 700; color: var(--wine-dark); text-transform: uppercase; letter-spacing: .06em;
+}
+.v-prod-card-count {
+  font-size: .66rem; font-weight: 700; color: var(--wine); background: var(--wine-pale);
+  border-radius: 99px; padding: 2px 9px; white-space: nowrap;
+}
+
 /* ── PARETO / PROGRESS LIST ── */
 .pareto-list { list-style: none; }
 .pareto-item {
@@ -4178,14 +4198,16 @@ function vProdStats(rows, tipo){
 }
 function vTableProd(rows){
   var cont=document.getElementById("v-table-prod");
-  var h='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.1rem;">';
-  V_TIPOS.forEach(function(t){
+  var h='<div class="v-prod-grid">';
+  V_TIPOS.filter(function(t){return t!=="Producto Terminado";}).forEach(function(t){
     var arr=vProdStats(rows,t).slice(0,10);
-    h+='<div><div style="font-weight:700;font-size:.8rem;color:var(--wine-dark);margin-bottom:.5rem;">'+t+'</div>';
+    h+='<div class="v-prod-card"><div class="v-prod-card-head"><span class="v-prod-card-title">'+t+'</span>'
+      +(arr.length?'<span class="v-prod-card-count">'+arr.length+(arr.length===1?' ref.':' refs.')+'</span>':'')
+      +'</div>';
     if(!arr.length){
       h+='<div style="font-size:.76rem;color:var(--text-muted);padding:.5rem 0;">Sin incumplimientos en el per\u00edodo filtrado.</div>';
     } else {
-      h+='<div style="max-height:320px;overflow-y:auto;border-radius:10px;box-shadow:var(--shadow-sm);"><table style="width:100%;border-collapse:collapse;background:#fff;font-size:.76rem;"><thead><tr>';
+      h+='<div style="max-height:320px;overflow-y:auto;border-radius:10px;"><table style="width:100%;border-collapse:collapse;background:#fff;font-size:.76rem;"><thead><tr>';
       ["Referencia","Descripción","Líneas Incump."].forEach(function(th,i){
         h+='<th style="position:sticky;top:0;background:rgba(122,26,46,0.9);color:#fff;font-size:.62rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:7px 9px;text-align:'+(i<2?"left":"center")+';white-space:nowrap;">'+th+"</th>";
       });
