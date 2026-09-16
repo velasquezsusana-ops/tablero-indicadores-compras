@@ -52,7 +52,7 @@ def new_bucket():
 # ── PASE 1: Historico de compras por item.xlsx -> estado on-time por Nro orden ──
 print("PASE 1: Historico de compras (estado on-time por Nro orden)...")
 wb2 = openpyxl.load_workbook(base + "Histórico de compras por item.xlsx", data_only=True, read_only=True)
-ws2 = wb2.active
+ws2 = wb2[wb2.sheetnames[0]]
 
 hist_orders_ontime = defaultdict(list)  # nro_orden -> [bool on_time, ...] de cada entrega vinculada
 

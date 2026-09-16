@@ -31,7 +31,7 @@ top_items = set(it["name"] for it in fd["topItems"])
 
 print("Leyendo historico de compras (lead time por mes/proveedor/item)...")
 wb = openpyxl.load_workbook(base + "Histórico de compras por item.xlsx", data_only=True, read_only=True)
-ws = wb.active
+ws = wb[wb.sheetnames[0]]
 
 # Mismo criterio que LT_DATA original: solo filas con Docto. orden vinculado
 lt_rows = []  # (f_oc, real, late_days, prov, item)

@@ -1,14 +1,14 @@
 import json
 
 base = "C:/Users/Montolivo/Dropbox/Asesorias PYMES/1. Proyectos Actuales/2. MONTOLIVO/2. Proyecto/Indicadores Montolivo/Compras/Bases para actualizar Claude/"
-scratch = "C:/Users/MONTOL~1/AppData/Local/Temp/claude/C--Users-Montolivo/27afce9d-8783-40f9-967e-828b75f5dde0/scratchpad/"
+scratch = "C:/Users/MONTOL~1/AppData/Local/Temp/claude/C--Users-Montolivo/9edfb5b5-5a64-49ae-95e9-48f3c0470e76/scratchpad/blocks/"
 
 with open(base + "dashboard_data.json", encoding="utf-8") as f:
     DD = json.load(f)
 with open(base + "filter_data.json", encoding="utf-8") as f:
     FILTER_RAW = json.load(f)
-with open(base + "filter_data_v2.json", encoding="utf-8") as f:
-    PRICE_RAW = json.load(f)
+# PRICE_DATA / filter_data_v2.json: fuera de alcance de este refresco — PRICE_DATA ya se
+# actualiza por separado con extract/update_price_data.py (factores corregidos + AA-AE).
 with open(base + "extract_lt_da_dn_output.json", encoding="utf-8") as f:
     EXTRA = json.load(f)
 
@@ -115,12 +115,7 @@ with open(scratch + "FILTER_block.txt", "w", encoding="utf-8") as f:
     f.write(FILTER_block)
 print("\nFILTER block written. Chars:", len(FILTER_block))
 
-# ── PRICE_DATA (near-direct dump of filter_data_v2.json) ──
-price_json = json.dumps(PRICE_RAW, ensure_ascii=False, separators=(',', ':'))
-PRICE_block = "const PRICE_DATA = " + price_json + ";"
-with open(scratch + "PRICE_DATA_block.txt", "w", encoding="utf-8") as f:
-    f.write(PRICE_block)
-print("PRICE_DATA block written. Chars:", len(PRICE_block))
+# PRICE_DATA: fuera de alcance — se actualiza aparte con update_price_data.py, no aqui.
 
 # ── LT_DATA ──
 def obj_stats(s):

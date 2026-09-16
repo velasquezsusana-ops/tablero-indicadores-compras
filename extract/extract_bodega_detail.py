@@ -39,7 +39,7 @@ top_items = set(it["name"] for it in fd["topItems"])
 
 print("Leyendo historico de compras (desglose bodega x mes/proveedor/item)...")
 wb = openpyxl.load_workbook(base + "Histórico de compras por item.xlsx", data_only=True, read_only=True)
-ws = wb.active
+ws = wb[wb.sheetnames[0]]
 
 bodega_monthly = defaultdict(lambda: [0.0] * len(months))
 bodega_by_prov = defaultdict(lambda: defaultdict(float))

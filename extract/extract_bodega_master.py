@@ -56,7 +56,7 @@ top_items = set(it["name"] for it in fd["topItems"])
 # ════════════════════════════════════════════════════════════════
 print("PASS 1: Historico de compras (bodega x mes x prov/item)...")
 wb2 = openpyxl.load_workbook(base + "Histórico de compras por item.xlsx", data_only=True, read_only=True)
-ws2 = wb2.active
+ws2 = wb2[wb2.sheetnames[0]]
 
 all_bodegas = set()
 hist_monthly = defaultdict(lambda: [0.0]*NM)

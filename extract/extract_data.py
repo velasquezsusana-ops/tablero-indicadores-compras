@@ -29,7 +29,7 @@ MESES_VALIDOS = {f"2025-{m:02d}" for m in range(1,13)} | {f"2026-{m:02d}" for m 
 # FILE 2 - Historico
 print("Leyendo historico de compras...")
 wb2 = openpyxl.load_workbook(base + "Histórico de compras por item.xlsx", data_only=True, read_only=True)
-ws2 = wb2.active
+ws2 = wb2[wb2.sheetnames[0]]
 
 monthly_spend = defaultdict(float)
 supplier_spend = defaultdict(float)

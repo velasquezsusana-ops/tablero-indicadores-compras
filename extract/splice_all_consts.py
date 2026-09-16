@@ -11,13 +11,13 @@ import json
 from pathlib import Path
 
 BASE = Path("C:/Users/Montolivo/Dropbox/Asesorias PYMES/1. Proyectos Actuales/2. MONTOLIVO/2. Proyecto/Indicadores Montolivo/Compras/Bases para actualizar Claude")
-SCRATCH = Path("C:/Users/MONTOL~1/AppData/Local/Temp/claude/C--Users-Montolivo/27afce9d-8783-40f9-967e-828b75f5dde0/scratchpad")
+SCRATCH = Path("C:/Users/MONTOL~1/AppData/Local/Temp/claude/C--Users-Montolivo/9edfb5b5-5a64-49ae-95e9-48f3c0470e76/scratchpad/blocks")
 HTML_PATH = BASE / "Tablero_Indicadores_Compras.html"
 
 BLOCK_FILES = {
     "D": "D_block.txt",
     "FILTER": "FILTER_block.txt",
-    "PRICE_DATA": "PRICE_DATA_block.txt",
+    # PRICE_DATA excluido a proposito: ya se actualiza aparte con update_price_data.py
     "LT_DATA": "LT_DATA_block.txt",
     "DA": "DA_block.txt",
     "DN": "DN_block.txt",

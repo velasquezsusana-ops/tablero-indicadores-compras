@@ -27,7 +27,7 @@ NM = len(months_all)
 
 print("Leyendo historico de compras (detalle bodega x item, TODOS los items, con desglose mensual)...")
 wb = openpyxl.load_workbook(base + "Histórico de compras por item.xlsx", data_only=True, read_only=True)
-ws = wb.active
+ws = wb[wb.sheetnames[0]]
 
 combo_gasto = defaultdict(float)
 combo_fact = defaultdict(int)

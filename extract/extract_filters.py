@@ -22,7 +22,7 @@ base = "C:/Users/Montolivo/Dropbox/Asesorias PYMES/1. Proyectos Actuales/2. MONT
 
 print("Leyendo historico de compras (detalle proveedor/item por mes)...")
 wb2 = openpyxl.load_workbook(base + "Histórico de compras por item.xlsx", data_only=True, read_only=True)
-ws2 = wb2.active
+ws2 = wb2[wb2.sheetnames[0]]
 
 months = ["2025-01","2025-02","2025-03","2025-04","2025-05","2025-06","2025-07","2025-08",
           "2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09"]

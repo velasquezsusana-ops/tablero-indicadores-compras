@@ -21,7 +21,7 @@ base = "C:/Users/Montolivo/Dropbox/Asesorias PYMES/1. Proyectos Actuales/2. MONT
 
 print("Leyendo historico de compras (detalle linea a linea de lead time: fecha solicitada/esperada/llegada)...")
 wb = openpyxl.load_workbook(base + "Histórico de compras por item.xlsx", data_only=True, read_only=True)
-ws = wb.active
+ws = wb[wb.sheetnames[0]]
 
 headers = None
 n_total = 0

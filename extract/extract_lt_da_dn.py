@@ -46,7 +46,7 @@ def abbrev_provider(name):
 # ════════════════════════════════════════════════════════════════
 print("PASS 1: Historico de compras...")
 wb2 = openpyxl.load_workbook(base + "Histórico de compras por item.xlsx", data_only=True, read_only=True)
-ws2 = wb2.active
+ws2 = wb2[wb2.sheetnames[0]]
 
 REF_CAT = {
     "MP": "MATERIA PRIMA", "PC": "PTO TERMINADO", "AC": "INV ASEO Y CAFETERIA",
