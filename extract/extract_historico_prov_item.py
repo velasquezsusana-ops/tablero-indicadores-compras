@@ -32,10 +32,11 @@ for i, r in enumerate(ws_um.iter_rows(values_only=True)):
 print(f"  Ítems con homologación oficial: {len(um_lookup)}")
 
 print("Leyendo historico de compras (agregados proveedor/item con homologación de peso)...")
-ws = wb.active
+ws = wb[wb.sheetnames[0]]
 
 def new_acc():
-    return {"gasto": 0.0, "facturas": 0, "gastoGramos": 0.0, "gramos": 0.0, "gastoOtras": 0.0, "otrasUM": defaultdict(float)}
+    return {"gasto": 0.0, "facturas": 0, "gastoGramos": 0.0, "gramos": 0.0,
+            "gastoUnidades": 0.0, "unidades": 0.0, "gastoOtras": 0.0, "otrasUM": defaultdict(float)}
 
 prov_acc = defaultdict(new_acc)
 item_acc = defaultdict(new_acc)
@@ -58,7 +59,9 @@ for i, row in enumerate(ws.iter_rows(values_only=True)):
 
     info = um_lookup.get(ref)
     gramos = 0.0
+    unidades = 0.0
     homologado = False
+    homologadoUnid = False
     if info:
         um_invent, factor_orden, um_orden = info
         if um_invent == 'GR':
@@ -73,12 +76,22 @@ for i, row in enumerate(ws.iter_rows(values_only=True)):
             else:
                 n_sin_factor += 1
         else:
+            # Ítem controlado "por unidad" en inventario (no por peso): homologamos a UNID.
+            if um == um_orden:
+                unidades = cant * factor_orden
+                homologadoUnid = True
+            elif um in ('UNID', 'UND'):
+                unidades = cant
+                homologadoUnid = True
             n_unid += 1
     else:
         n_sin_ref += 1
         if um in CLEAN_GRAMOS:
             gramos = cant * CLEAN_GRAMOS[um]
             homologado = True
+        elif um in ('UNID', 'UND'):
+            unidades = cant
+            homologadoUnid = True
 
     for name, acc_dict in ((prov, prov_acc), (item, item_acc)):
         if not name:
@@ -89,6 +102,9 @@ for i, row in enumerate(ws.iter_rows(values_only=True)):
         if homologado:
             a["gastoGramos"] += neto
             a["gramos"] += gramos
+        elif homologadoUnid:
+            a["gastoUnidades"] += neto
+            a["unidades"] += unidades
         else:
             a["gastoOtras"] += neto
             if um: a["otrasUM"][um] += cant
@@ -110,6 +126,7 @@ def build_out(acc, order):
         if not a or a["gasto"] <= 0:
             continue
         pctPeso = round(a["gastoGramos"] / a["gasto"] * 100, 1) if a["gasto"] else 0.0
+        pctUnid = round(a["gastoUnidades"] / a["gasto"] * 100, 1) if a["gasto"] else 0.0
         out.append({
             "name": name,
             "gasto": round(a["gasto"] / M, 1),
@@ -119,6 +136,9 @@ def build_out(acc, order):
             "kg": round(a["gramos"] / 1000, 2),
             "pctPesoHomologado": pctPeso,
             "precioPromGramo": round(a["gastoGramos"] / a["gramos"], 2) if a["gramos"] > 0 else None,
+            "unidades": round(a["unidades"], 1),
+            "pctUnidHomologado": pctUnid,
+            "precioPromUnidad": round(a["gastoUnidades"] / a["unidades"], 2) if a["unidades"] > 0 else None,
             "otrasUM": {k: round(v, 1) for k, v in sorted(a["otrasUM"].items(), key=lambda x: -x[1])[:3]},
         })
     out.sort(key=lambda x: -x["gasto"])
