@@ -4744,16 +4744,17 @@ function actualizarRestoreFromStorage() {
       const r = JSON.parse(principal);
       D = r.D; FILTER = r.FILTER; LT_DATA = r.LT_DATA; LT_DETAIL = r.LT_DETAIL; DA = r.DA; DN = r.DN; PROV_ITEM_CROSS = r.PROV_ITEM_CROSS;
     }
-    const envios = localStorage.getItem('montolivo_envios_data');
-    if (envios) {
-      const p = JSON.parse(envios);
-      window.vRefreshEnvios(p.rows, p.pdvNames);
-    }
     const price = localStorage.getItem('montolivo_price_data');
     if (price) PRICE_DATA = JSON.parse(price);
     const ventas = localStorage.getItem('montolivo_ventas_data');
     if (ventas) VENTAS_DATA = JSON.parse(ventas);
   } catch (err) { console.warn('No se pudo restaurar datos publicados anteriormente:', err); }
+
+  // Envíos a PDV (picking) vive en IndexedDB, no en localStorage, por su tamaño —
+  // se restaura aparte y de forma asíncrona (no bloquea el resto de la carga inicial).
+  actualizarIdbLoad('montolivo_envios_data')
+    .then(p => { if (p) window.vRefreshEnvios(p.rows, p.pdvNames); })
+    .catch(err => console.warn('No se pudo restaurar Envíos a PDV vs Pedidos:', err));
   ACTUALIZAR_FILES.forEach(f => actualizarRefreshCardStatus(f.id));
 }
 
@@ -4779,6 +4780,38 @@ const actualizarSinPersistir = [];
 function actualizarSafeSave(key, value, label) {
   try { localStorage.setItem(key, JSON.stringify(value)); return true; }
   catch (err) { actualizarSinPersistir.push(label); return false; }
+}
+
+// IndexedDB: para datasets grandes que no caben en localStorage (ej. Envíos a PDV,
+// ~90.000 filas). El límite de IndexedDB es mucho mayor (cientos de MB), a diferencia
+// de los ~5-10MB de localStorage que ya usan OTIF/Resumen/etc.
+const ACTUALIZAR_IDB_NAME = 'montolivo_actualizar_db';
+const ACTUALIZAR_IDB_STORE = 'kv';
+function actualizarIdbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(ACTUALIZAR_IDB_NAME, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore(ACTUALIZAR_IDB_STORE); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function actualizarIdbSave(key, value) {
+  const db = await actualizarIdbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ACTUALIZAR_IDB_STORE, 'readwrite');
+    tx.objectStore(ACTUALIZAR_IDB_STORE).put(value, key);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function actualizarIdbLoad(key) {
+  const db = await actualizarIdbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ACTUALIZAR_IDB_STORE, 'readonly');
+    const req = tx.objectStore(ACTUALIZAR_IDB_STORE).get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -5390,7 +5423,7 @@ function actualizarRecalcularOtif() {
   return { monthly: overall, byProv, byItem };
 }
 
-function actualizarPublicar() {
+async function actualizarPublicar() {
   const ids = Object.keys(actualizarTemp);
   if (!ids.length) { alert('Adjunta al menos un archivo antes de publicar.'); return; }
 
@@ -5449,7 +5482,8 @@ function actualizarPublicar() {
       const parsed = actualizarParsePicking(actualizarTemp['picking'].wb);
       if (!parsed.rows.length) throw new Error('no se encontraron filas de datos');
       window.vRefreshEnvios(parsed.rows, parsed.pdvNames);
-      actualizarSafeSave('montolivo_envios_data', parsed, 'Envíos a PDV vs Pedidos');
+      try { await actualizarIdbSave('montolivo_envios_data', parsed); }
+      catch (e) { actualizarSinPersistir.push('Envíos a PDV vs Pedidos'); }
       actualizados.push('Envíos a PDV vs Pedidos');
     } catch (err) { pendientes.push('Diferencia de picking (' + err.message + ')'); }
   }
