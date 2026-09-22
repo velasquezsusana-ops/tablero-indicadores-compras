@@ -1,10 +1,10 @@
 {
-  "total_neto": 40444818531.650185,
-  "total_bruto": 38091953519.669914,
+  "total_neto": 40979221418.12019,
+  "total_bruto": 38593588717.81991,
   "total_dsctos": 576.4499999999999,
-  "total_imptos": 2352865588.4299846,
-  "n_compras": 80422,
-  "tasa_descuento": 1.513311727901623e-06,
+  "total_imptos": 2385633276.7499857,
+  "n_compras": 81098,
+  "tasa_descuento": 1.4936418694171198e-06,
   "monthly_spend": {
     "2025-01": 1763705574.0,
     "2025-02": 1698027449.0,
@@ -26,7 +26,7 @@
     "2026-06": 2166911992.2599983,
     "2026-07": 2518006820.689995,
     "2026-08": 2119999336.69,
-    "2026-09": 397627997.71999997
+    "2026-09": 932030884.1900002
   },
   "monthly_oc": {
     "2025-01": 1503711689.51,
@@ -49,7 +49,7 @@
     "2026-06": 2037428435.4100003,
     "2026-07": 2285624644.4799995,
     "2026-08": 1932988434.7000012,
-    "2026-09": 353674325.76000005
+    "2026-09": 807451329.0000001
   },
   "monthly_salidas": {
     "2025-01": 235585723.54000014,
@@ -72,32 +72,32 @@
     "2026-06": 287244213.4500011,
     "2026-07": 187855795.49000022,
     "2026-08": 138946650.3999997,
-    "2026-09": 7981875.66
+    "2026-09": 35834423.26999998
   },
   "top_suppliers_hist": [
     [
       "IMPORFOOD PACIFIC BLUE S.A.S",
-      2115459060.0
+      2154707060.0
     ],
     [
       "FRUTA CON CORAZON SAS",
-      2058333236.05
+      2093242456.05
     ],
     [
       "AVIDESA MAC POLLO SAS",
-      2030190317.550001
+      2069454724.550001
     ],
     [
       "INDUSTRIA NACIONAL DE GASEOSAS S A S",
-      1907388282.9699974
+      1927175128.069997
     ],
     [
       "CENTURION FOODS S.A.S",
-      1815358549.189999
+      1836021099.6099992
     ],
     [
       "DIEZ EQUIS S.A.S",
-      1410258561.4799988
+      1450583884.679999
     ],
     [
       "EL GRAN LANGOSTINO SAS",
@@ -105,7 +105,7 @@
     ],
     [
       "PRODUCTOS RIKATAS LTDA",
-      1237013328.9800003
+      1248404588.9800003
     ],
     [
       "SALERNO IMPORTACIONES SAS",
@@ -113,29 +113,29 @@
     ],
     [
       "ARANGO HOYOS JULIO CESAR",
-      924124950.0
+      931798020.0
     ]
   ],
   "top_suppliers_oc": [
     [
       "IMPORFOOD PACIFIC BLUE S.A.S",
-      2214677000.0
+      2254677000.0
     ],
     [
       "AVIDESA MAC POLLO SAS",
-      2183547232.3300004
+      2222817232.3300004
     ],
     [
       "FRUTA CON CORAZON SAS",
-      2150787380.0
+      2185824960.0
     ],
     [
       "CENTURION FOODS S.A.S",
-      1870944292.7099998
+      1891521433.5599997
     ],
     [
       "DIEZ EQUIS S.A.S",
-      1466186119.3000007
+      1508071362.5000007
     ],
     [
       "EL GRAN LANGOSTINO SAS",
@@ -143,15 +143,15 @@
     ],
     [
       "PRODUCTOS RIKATAS LTDA",
-      1287380200.6999998
+      1293770200.6999998
     ],
     [
       "SALERNO IMPORTACIONES SAS",
-      1054103468.0600002
+      1060243868.0600002
     ],
     [
       "GRUPO COSTA DORADA SAS",
-      957421350.0
+      967321350.0
     ],
     [
       "CHICKEN PORCIONADOS SAS",
@@ -161,43 +161,43 @@
   "top_items_hist": [
     [
       "FILETE SALMON 1-2 PREMIUM X KG",
-      3999170182.0
+      4038418182.0
     ],
     [
       "PECHUGA ENTERA X KG",
-      3080044553.5699987
+      3119308960.5699987
     ],
     [
       "SOLOMO REDONDO X KG",
-      2630006445.5200005
+      2672968765.5200005
     ],
     [
       "QUESO PARMESANO X KG",
-      1824679636.69
+      1843928184.19
     ],
     [
       "CREMA DE LECHE ENTERA X 10 LT",
-      1154985439.0
+      1162617439.0
     ],
     [
       "TOCINO PREMIUM X KG",
-      882970000.0
+      897370000.0
     ],
     [
       "FILETE DE BASSA T 5 X 1 KG",
-      828718904.81
+      839718904.81
     ],
     [
       "QUESO MOZARELLA COLANTA X 2000 GR",
-      790883816.6900002
+      820062547.8900002
     ],
     [
       "CAMARON 71 X 90 X KG",
-      745873000.0
+      755773000.0
     ],
     [
       "LECHUGA",
-      740595464.0599998
+      746598591.9699998
     ]
   ],
   "top_items_salidas": [
@@ -207,11 +207,11 @@
     ],
     [
       "COMBO UNIFORME COCINA",
-      326360888.510002
+      331024993.190002
     ],
     [
       "LECHUGA",
-      295102312.800001
+      298165970.9200012
     ],
     [
       "BURLETE HORNO RATIONAL",
@@ -231,7 +231,7 @@
     ],
     [
       "ZAPATO BLANCO EVACOL",
-      108678953.6599984
+      109600403.42999843
     ],
     [
       "DESENGRASANTE DHP-50 X 4 LT",
@@ -245,7 +245,7 @@
   "bodega_spend": [
     [
       "LOCAL",
-      33872786155.910126
+      34354150037.090134
     ],
     [
       "MONTE",
@@ -253,41 +253,41 @@
     ],
     [
       "RP001",
-      511728620.6799997
+      536840972.66999966
     ],
     [
       "DOTAC",
-      474551935.5700003
+      474731935.5700003
     ],
     [
       "PV119",
-      145076202.31999996
+      146967548.81999996
     ],
     [
       "PV132",
-      124694920.95000002
+      125456066.95000002
     ],
     [
       "PV129",
-      119500316.14
+      119665316.14
     ],
     [
       "PV139",
-      116534955.15
+      117882401.15
     ],
     [
       "PV108",
-      115099193.58
+      116109991.58
     ],
     [
       "PV138",
-      110632467.53999999
+      111823180.53999999
     ]
   ],
   "bodega_salidas": [
     [
       "DOTACION",
-      626917928.0100007
+      634336857.5800004
     ],
     [
       "REPUESTOS",
@@ -295,57 +295,57 @@
     ],
     [
       "CDP CENTRO DE PRODUCCION",
-      347253392.42999995
+      347919947.21000004
     ],
     [
       "DEVOLUCION PRINCIPAL",
-      182807964.84
+      188929310.71999997
     ],
     [
       "LOCAL",
-      158339698.47999978
+      159662768.8199998
     ],
     [
       "PDV VIVA ENVIGADO",
-      140098728.78999954
+      140519931.61999956
     ],
     [
       "PDV PARQUE FABRICATO",
-      133697291.80999945
+      134434870.50999942
     ],
     [
       "PDV ARKADIA",
-      122965920.63000026
+      123822706.33000022
     ],
     [
       "PDV EL TESORO",
-      110594291.11999989
+      110992151.94999984
     ],
     [
       "PDV PUERTA DEL NORTE",
-      109368473.76999971
+      109593032.01999968
     ]
   ],
-  "oc_total_ordenado": 16273463.030000001,
-  "oc_total_recibido": 13828029.955000006,
-  "oc_total_pendiente": 2873396.219999999,
-  "oc_valor_pendiente": 3149325054.79011,
-  "oc_valor_total": 36595362548.54007,
-  "fulfillment_rate": 84.97287841873694,
-  "avg_lead_time": 1.0287711018333636,
-  "oc_vencidas": 1648,
+  "oc_total_ordenado": 16341841.030000001,
+  "oc_total_recibido": 13897367.675000004,
+  "oc_total_pendiente": 2874215.929999999,
+  "oc_valor_pendiente": 3169264301.97011,
+  "oc_valor_total": 37049139551.78007,
+  "fulfillment_rate": 85.04162810963291,
+  "avg_lead_time": 1.036604011152082,
+  "oc_vencidas": 1659,
   "oc_por_estado": {
-    "Cumplido": 10425,
+    "Cumplido": 10519,
     "Aprobado": 200,
-    "Anulado": 103,
+    "Anulado": 104,
     "En elaboración": 22,
-    "Parcial": 263,
+    "Parcial": 269,
     "En proceso de aprobación": 5
   },
   "comprador_counts": [
     [
       "ARANGO BEDOYA SANTIAGO",
-      10999
+      11099
     ],
     [
       "YEPES TAMAYO MIGUEL",
@@ -366,12 +366,16 @@
     [
       "VARGAS MORENO JUAN CAMILO",
       1
+    ],
+    [
+      "CASTAÑEDA MONTERO JENIFER ANDREA",
+      1
     ]
   ],
   "comprador_valor": [
     [
       "ARANGO BEDOYA SANTIAGO",
-      36582032555.55007
+      37033541558.79007
     ],
     [
       "INVERSIONES MONTOLIVO SAS",
@@ -380,6 +384,10 @@
     [
       "YEPES TAMAYO MIGUEL",
       4039812.0
+    ],
+    [
+      "CASTAÑEDA MONTERO JENIFER ANDREA",
+      2268000.0
     ],
     [
       "VARGAS MORENO JUAN CAMILO",
@@ -394,35 +402,35 @@
       68000.0
     ]
   ],
-  "total_costo_salidas": 5012592901.229741,
+  "total_costo_salidas": 5040445448.839745,
   "motivo_costo": [
     [
       "CONSUMO BODEGA",
-      2871701641.239991
+      2872476300.469991
     ],
     [
       "CONSUMO MENAJE Y DOTACION",
-      942403457.0200065
+      954735691.700006
     ],
     [
       "MERMA",
-      505573859.78000945
+      510301736.6900098
     ],
     [
       "CALIDAD DE MATERIA PRIMA",
-      191323659.88999993
+      193800193.90000007
     ],
     [
       "ACCIDENTES - ERROR PEDIDO",
-      155466725.4399972
+      156789018.76999703
     ],
     [
       "REPOSICION DE SALIDA",
-      145841246.12
+      146484506.12
     ],
     [
       "CONSUMO INTERNO POR INGRESOS",
-      108233227.63000023
+      113799854.5800003
     ],
     [
       "AJUSTE DE INVENTARIO",
@@ -434,33 +442,33 @@
     ],
     [
       "PERDIDA EN TRANSPORTE",
-      1454489.3200000005
+      1463551.8200000005
     ]
   ],
   "motivo_salidas_cant": [
     [
       "CONSUMO BODEGA",
-      394495786.2993
+      394504950.2993
     ],
     [
       "MERMA",
-      98529267.17000002
+      99343104.17000002
     ],
     [
       "CALIDAD DE MATERIA PRIMA",
-      21426147.17
+      21829885.17
     ],
     [
       "CONSUMO INTERNO POR INGRESOS",
-      7196818.0
+      7200053.0
     ],
     [
       "REPOSICION DE SALIDA",
-      5007726.0
+      5037926.0
     ],
     [
       "ACCIDENTES - ERROR PEDIDO",
-      2916555.95
+      2935243.95
     ],
     [
       "AJUSTE DE INVENTARIO",
@@ -472,8 +480,8 @@
     ]
   ],
   "estado_counts": {
-    "Facturado": 75662,
-    "Contabilizado": 4753,
+    "Facturado": 76038,
+    "Contabilizado": 5053,
     "En elaboración": 7
   }
 }
