@@ -1389,10 +1389,14 @@ footer strong { color: rgba(255,255,255,0.8); }
 <!-- ══ TAB ACTUALIZAR DATOS ══ -->
 <section id="tab-actualizar" class="tab-panel">
   <h2 class="section-title">Actualizar datos</h2>
-  <div style="font-size:0.82rem; color:var(--text-muted); max-width:920px; margin-bottom:1.5rem; line-height:1.5">Cada tarjeta reemplaza un insumo del cálculo con el archivo que adjuntes. Se leen .xlsx, .xlsb y .csv, se detectan los encabezados aunque cambie el orden de las columnas, y la herramienta se recalcula al instante.</div>
+  <div style="font-size:0.82rem; color:var(--text-muted); max-width:920px; margin-bottom:0.75rem; line-height:1.5">Cada tarjeta reemplaza un insumo del cálculo con el archivo que adjuntes. Se leen .xlsx, .xlsb y .csv, se detectan los encabezados aunque cambie el orden de las columnas, y la herramienta se recalcula al instante.</div>
+  <div style="font-size:0.78rem; color:var(--wine); max-width:920px; margin-bottom:1.5rem; line-height:1.5; background:var(--wine-pale); border-radius:8px; padding:0.6rem 0.9rem">ⓘ Si abres este archivo con doble clic (no desde un servidor web), el navegador a veces no recuerda lo publicado al cerrarlo del todo. Por eso, al publicar se descarga automáticamente un archivo de respaldo (<em>montolivo_respaldo.json</em>) — guárdalo, y si alguna vez abres el tablero y ves los datos de fábrica, usa el botón "Cargar respaldo" para recuperarlo en 2 clics, sin tener que volver a subir los 7 Excel.</div>
 
   <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-bottom:1.5rem; flex-wrap:wrap">
     <button class="btn-secondary-outline" onclick="actualizarDescartar()">Volver a los datos publicados</button>
+    <label class="btn-secondary-outline" for="actualizar-respaldo-input" style="cursor:pointer">Cargar respaldo
+      <input type="file" id="actualizar-respaldo-input" accept=".json" style="display:none" onchange="actualizarCargarRespaldo(event)">
+    </label>
     <button class="btn-publish" onclick="actualizarPublicar()">Publicar datos para todos</button>
   </div>
 
@@ -4814,6 +4818,64 @@ async function actualizarIdbLoad(key) {
   });
 }
 
+// Respaldo descargable: cuando el tablero se abre con doble clic (file://) el
+// navegador a veces no conserva localStorage/IndexedDB al cerrarlo del todo.
+// Este archivo .json es la red de seguridad — no depende de la memoria del
+// navegador, solo de que el usuario guarde el archivo descargado.
+function actualizarDescargarRespaldo() {
+  const snapshot = {
+    guardadoEl: new Date().toISOString(),
+    otif: OTIF_DATA, neg: NEG_DATA, price: PRICE_DATA, ventas: VENTAS_DATA,
+    principal: { D, FILTER, LT_DATA, LT_DETAIL, DA, DN, PROV_ITEM_CROSS },
+    envios: (window.vGetEnviosSnapshot ? window.vGetEnviosSnapshot() : null),
+    meta: actualizarPublishedMeta
+  };
+  const blob = new Blob([JSON.stringify(snapshot)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'montolivo_respaldo.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function actualizarCargarRespaldo(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const snapshot = JSON.parse(e.target.result);
+      if (snapshot.otif) OTIF_DATA = snapshot.otif;
+      if (snapshot.neg) NEG_DATA = snapshot.neg;
+      if (snapshot.price) PRICE_DATA = snapshot.price;
+      if (snapshot.ventas) VENTAS_DATA = snapshot.ventas;
+      if (snapshot.principal) {
+        const p = snapshot.principal;
+        D = p.D; FILTER = p.FILTER; LT_DATA = p.LT_DATA; LT_DETAIL = p.LT_DETAIL; DA = p.DA; DN = p.DN; PROV_ITEM_CROSS = p.PROV_ITEM_CROSS;
+        populateFilters();
+        document.getElementById('filter-info').textContent =
+          D.totalFacturas.toLocaleString('es-CO') + ' facturas · ' + D.totalProveedores + ' proveedores · ' + D.totalItems + ' ítems';
+      }
+      if (snapshot.envios && window.vRefreshEnvios) window.vRefreshEnvios(snapshot.envios.rows, snapshot.envios.pdvNames);
+      if (snapshot.meta) actualizarPublishedMeta = snapshot.meta;
+      // Intenta volver a guardarlo en este navegador por si esta vez sí persiste.
+      actualizarSafeSave('montolivo_otif_data', OTIF_DATA, 'OTIF');
+      actualizarSafeSave('montolivo_neg_data', NEG_DATA, 'Negociaciones');
+      actualizarSafeSave('montolivo_price_data', PRICE_DATA, 'Precio Unitario');
+      actualizarSafeSave('montolivo_ventas_data', VENTAS_DATA, 'Ventas vs Compras');
+      actualizarSafeSave('montolivo_principal_data', snapshot.principal, 'Resumen Ejecutivo y demás');
+      actualizarSafeSave('montolivo_actualizar_meta', actualizarPublishedMeta, 'Estado de las tarjetas');
+      if (snapshot.envios) actualizarIdbSave('montolivo_envios_data', snapshot.envios).catch(() => {});
+      ACTUALIZAR_FILES.forEach(f => actualizarRefreshCardStatus(f.id));
+      actualizarNotify('✓ Respaldo cargado: ' + (snapshot.guardadoEl ? new Date(snapshot.guardadoEl).toLocaleString('es-CO') : file.name) + '.');
+      renderAll();
+    } catch (err) {
+      alert('El archivo de respaldo no es válido o está dañado: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 // Port fiel de extract_data.py + extract_filters.py + extract_lt_detail.py +
 // extract_lt_da_dn.py + build_js_blocks.py, ejecutado en el navegador sobre
@@ -5538,6 +5600,10 @@ async function actualizarPublicar() {
     : 'Archivos recibidos, sin indicadores recalculados aún.';
   if (pendientes.length) msg += ' Pendiente de conectar: ' + pendientes.join(' · ') + '.';
   if (actualizarSinPersistir.length) msg += ' ⚠ No se pudo guardar para la próxima vez que abras la página (archivo muy grande para la memoria del navegador): ' + actualizarSinPersistir.join(', ') + '.';
+  if (actualizados.length) {
+    msg += ' Se descargó "montolivo_respaldo.json" — guárdalo por si el navegador no recuerda esto al cerrar la página.';
+    actualizarDescargarRespaldo();
+  }
   actualizarNotify(msg);
 
   setTab('resumen', document.querySelector('.sec-tab[onclick*="resumen"]'));
@@ -6229,6 +6295,12 @@ window.vRefreshEnvios = function(newEnviosData, newPdvNames) {
   vSems();
   vDetailPage = 0;
   vApply();
+};
+
+// Para el archivo de respaldo descargable (Actualizar Datos): entrega el estado
+// actual de Envíos a PDV tal cual lo necesita vRefreshEnvios para reconstruirlo.
+window.vGetEnviosSnapshot = function() {
+  return { rows: ENVIOS_DATA, pdvNames: PDV_NAMES };
 };
 
 vApply();
