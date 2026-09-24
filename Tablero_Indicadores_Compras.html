@@ -1123,7 +1123,7 @@ footer strong { color: rgba(255,255,255,0.8); }
   <div class="chart-grid-21">
     <div class="chart-card">
       <div class="card-title">Detalle de Negociaciones (<span id="neg-count">–</span> productos)</div>
-      <div class="card-sub">Precio actual vs. negociado, ahorro mensual/anual y estado de la negociación</div>
+      <div class="card-sub">Precio actual vs. negociado, ahorro mensual y estado de la negociación</div>
       <div style="overflow: auto; max-height: 520px">
         <table class="data-table" id="neg-table">
           <thead><tr>
@@ -1132,7 +1132,6 @@ footer strong { color: rgba(255,255,255,0.8); }
             <th style="position:sticky; top:0; background:#fff; z-index:1">Precio Nuevo / kg</th>
             <th style="position:sticky; top:0; background:#fff; z-index:1">Ahorro Mensual $</th>
             <th style="position:sticky; top:0; background:#fff; z-index:1">Reducción %</th>
-            <th style="position:sticky; top:0; background:#fff; z-index:1">Ahorro Anual $</th>
             <th style="position:sticky; top:0; background:#fff; z-index:1">Estado</th>
           </tr></thead>
           <tbody id="neg-tbody"></tbody>
@@ -3409,14 +3408,13 @@ function renderNegociacionesTab() {
       <td class="num">${negFmt(p.precioNuevo)}</td>
       <td class="num var-down">${negFmt(p.ahorroMensual)}</td>
       <td class="num">${negFmtPct(p.reduccionPct)}</td>
-      <td class="num var-down">${negFmt(p.ahorroAnual)}</td>
       <td><span class="estado-badge ${NEG_ESTADO_CLS[p.estado] || 'estado-sin-estado'}">${p.estado}</span></td>
-    </tr>`).join('') : `<tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:1.5rem">Sin productos para el filtro seleccionado.</td></tr>`;
+    </tr>`).join('') : `<tr><td colspan="6" style="text-align:center;color:var(--text-light);padding:1.5rem">Sin productos para el filtro seleccionado.</td></tr>`;
 
   document.getElementById('neg-tfoot').innerHTML = rows.length ? `<tr style="font-weight:700;background:var(--wine-ghost)">
       <td>TOTAL</td><td></td><td></td>
       <td class="num var-down">${negFmt(sumMensual)}</td><td></td>
-      <td class="num var-down">${negFmt(sumAnual)}</td><td></td>
+      <td></td>
     </tr>` : '';
 
   renderNegParticipacionList(rows.length ? rows : NEG_DATA.productos);
