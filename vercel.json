@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/Tablero_Indicadores_Compras.html" }
+  ]
+}
