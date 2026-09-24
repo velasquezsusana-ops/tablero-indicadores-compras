@@ -925,6 +925,42 @@ footer strong { color: rgba(255,255,255,0.8); }
     </div>
   </div>
 
+  <div class="chart-grid-3">
+    <div class="chart-card">
+      <div class="card-title">Calidad del Producto — Distribución</div>
+      <div class="card-sub">Proveedores por calificación (1 a 5)</div>
+      <div class="donut-wrap" style="height:220px; position:relative">
+        <canvas id="ch-otif-calif-calidad" style="height:220px"></canvas>
+        <div class="donut-center">
+          <div class="donut-center-val" id="donut-calif-calidad-val">–</div>
+          <div class="donut-center-label">Promedio</div>
+        </div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">Plazo de Pago (Crédito) — Distribución</div>
+      <div class="card-sub">Proveedores por calificación (1 a 5)</div>
+      <div class="donut-wrap" style="height:220px; position:relative">
+        <canvas id="ch-otif-calif-pago" style="height:220px"></canvas>
+        <div class="donut-center">
+          <div class="donut-center-val" id="donut-calif-pago-val">–</div>
+          <div class="donut-center-label">Promedio</div>
+        </div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">Lead Time (Tiempo de Entrega) — Distribución</div>
+      <div class="card-sub">Proveedores por calificación (1 a 5)</div>
+      <div class="donut-wrap" style="height:220px; position:relative">
+        <canvas id="ch-otif-calif-leadtime" style="height:220px"></canvas>
+        <div class="donut-center">
+          <div class="donut-center-val" id="donut-calif-leadtime-val">–</div>
+          <div class="donut-center-label">Promedio</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="chart-grid-1">
     <div class="chart-card">
       <div class="card-title">Clasificación de Proveedores — Calidad, Plazo de Pago y Lead Time (<span id="otif-clasif-count">–</span>)</div>
@@ -3002,6 +3038,27 @@ function renderOtifTab() {
   renderOtifClasificacionTable();
 }
 
+const OTIF_CALIF_COLORS = { 1: COLORS.red, 2: COLORS.amber, 3: COLORS.gold, 4: COLORS.olive, 5: COLORS.green };
+function otifCalifDonut(canvasId, valLabelId, rows, grp, campo) {
+  destroyChart(canvasId);
+  const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  let sum = 0, n = 0;
+  rows.forEach(p => {
+    const c = p[grp][campo].calif;
+    if (c != null) { counts[c]++; sum += c; n++; }
+  });
+  const avg = n ? sum / n : null;
+  document.getElementById(valLabelId).textContent = avg != null ? avg.toFixed(1) + ' / 5' : '–';
+  charts[canvasId] = new Chart(document.getElementById(canvasId), {
+    type: 'doughnut',
+    data: { labels: [1,2,3,4,5].map(s => 'Calificación ' + s + ' (' + counts[s] + ')'),
+      datasets: [{ data: [1,2,3,4,5].map(s => counts[s]), backgroundColor: [1,2,3,4,5].map(s => OTIF_CALIF_COLORS[s]), borderWidth: 0, hoverOffset: 8 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: {
+      legend: { position: 'bottom', labels: { color: '#7A6B72', font: { family: 'Lato', size: 10 }, padding: 8, boxWidth: 10 } },
+      tooltip: { ...TOOLTIP_BASE, callbacks: { label: c => c.raw + ' proveedor(es)' } } } }
+  });
+}
+
 // Reusa BENEFICIOS_DATA (ficha BD REAL) para mostrar, dentro de OTIF, la
 // calificación de Calidad/Plazo de pago/Lead Time que la pestaña "Beneficios
 // Proveedor" ya calcula — sin duplicar el cálculo.
@@ -3012,6 +3069,9 @@ function renderOtifClasificacionTable() {
   if (filterProvs.length) rows = rows.filter(p => matchAnyName(filterProvs, p.nombre));
   rows.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
   document.getElementById('otif-clasif-count').textContent = rows.length;
+  otifCalifDonut('ch-otif-calif-calidad', 'donut-calif-calidad-val', rows, 'producto', 'Calidad del Producto');
+  otifCalifDonut('ch-otif-calif-pago', 'donut-calif-pago-val', rows, 'admin', 'Crédito');
+  otifCalifDonut('ch-otif-calif-leadtime', 'donut-calif-leadtime-val', rows, 'admin', 'Tiempo de Entrega');
   const scoreCell = campo => {
     if (!campo || campo.calif == null) return '<span style="color:var(--text-light)">–</span>';
     const detalle = campo.resultado != null ? ` <span style="color:var(--text-muted);font-size:.7rem">(${campo.resultado}${campo.um === 'DÍAS' ? ' días' : ''})</span>` : '';
