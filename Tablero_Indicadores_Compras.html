@@ -2202,6 +2202,60 @@ function renderTopTipoResumen() {
 }
 
 
+// Colapsa tablas largas: muestra solo las primeras `limit` filas y agrega un
+// enlace "Ver más / Ver menos" al inicio del <tbody>. Se llama justo después de
+// pintar cada tabla (tras asignar el innerHTML con todas las filas). No toca
+// los totales/contadores del encabezado de cada tarjeta (esos ya cuentan sobre
+// el arreglo completo en JS, no sobre las filas visibles del DOM).
+function vtDataRows(tbody) {
+  return Array.prototype.filter.call(tbody.children, el => el.tagName === 'TR' && !el.hasAttribute('data-vt-toggle'));
+}
+// Re-oculta/muestra filas según el estado actual (colapsado/expandido) y el orden
+// ACTUAL del DOM — se vuelve a llamar después de un reordenamiento por columna
+// (ver sortTableByColumn) para que "las primeras N" siga siendo cierto tras ordenar.
+function vtReapplyVisibility(tbody) {
+  const limit = parseInt(tbody.getAttribute('data-vt-limit'), 10);
+  if (!limit) return;
+  const rows = vtDataRows(tbody);
+  const collapsed = tbody.getAttribute('data-vt-collapsed') === '1';
+  rows.forEach((r, i) => { r.style.display = (collapsed && i >= limit) ? 'none' : ''; });
+  const toggleRow = tbody.querySelector('tr[data-vt-toggle]');
+  if (toggleRow) {
+    const link = toggleRow.querySelector('a');
+    const hiddenCount = rows.length - limit;
+    link.textContent = collapsed ? `Ver más (${hiddenCount} filas más) ▼` : 'Ver menos ▲';
+    tbody.insertBefore(toggleRow, tbody.firstChild);
+  }
+}
+function vtApplyCollapse(tbodyId, limit) {
+  limit = limit || 5;
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  const rows = vtDataRows(tbody);
+  if (rows.length <= limit) { tbody.removeAttribute('data-vt-limit'); return; }
+  tbody.setAttribute('data-vt-limit', limit);
+  tbody.setAttribute('data-vt-collapsed', '1');
+  const cols = rows[0].children.length || 1;
+  const toggleRow = document.createElement('tr');
+  toggleRow.setAttribute('data-vt-toggle', '1');
+  const td = document.createElement('td');
+  td.colSpan = cols;
+  td.style.cssText = 'padding:.45rem .75rem;background:var(--wine-pale);border-radius:6px;';
+  const link = document.createElement('a');
+  link.href = 'javascript:void(0)';
+  link.style.cssText = 'font-size:.75rem;font-weight:700;color:var(--wine-dark);text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;';
+  link.onclick = () => {
+    tbody.setAttribute('data-vt-collapsed', tbody.getAttribute('data-vt-collapsed') === '1' ? '0' : '1');
+    vtReapplyVisibility(tbody);
+  };
+  td.appendChild(link);
+  toggleRow.appendChild(td);
+  tbody.insertBefore(toggleRow, tbody.firstChild);
+  vtReapplyVisibility(tbody);
+}
+window.vtApplyCollapse = vtApplyCollapse;
+window.vtReapplyVisibility = vtReapplyVisibility;
+
 // Detalle línea a línea de Lead Time: fecha solicitada (creación OC), fecha esperada
 // (prometida) y fecha real de llegada — respeta los mismos filtros globales
 // (proveedor/ítem/bodega/período) que el resto del tablero, combinados con AND.
@@ -2227,6 +2281,7 @@ function renderLtDetailTable() {
     <td class="num">${r.lt}</td>
     <td class="num ${r.retraso == null ? '' : r.retraso > 0 ? 'var-up' : 'var-down'}">${r.retraso == null ? '–' : (r.retraso > 0 ? r.retraso+' d tarde' : 'A tiempo')}</td>
   </tr>`).join('');
+  vtApplyCollapse('lt-detail-tbody', 5);
 }
 
 function renderLeadTimeResumen() {
@@ -2376,6 +2431,7 @@ function renderVentasCompras() {
     </tr>`;
   });
   document.getElementById('ventas-compras-tbody').innerHTML = rows;
+  vtApplyCollapse('ventas-compras-tbody', 5);
 }
 
 function renderResumenTab() {
@@ -2431,6 +2487,7 @@ function renderComparativoAnualTabla() {
     </tr>`;
   }
   document.getElementById('comp-anual-tbody').innerHTML = rows;
+  vtApplyCollapse('comp-anual-tbody', 5);
 }
 
 function renderTendenciasTab() { renderOcMensual(); }
@@ -2562,6 +2619,7 @@ function renderHistProvTable() {
   }).join('');
   document.getElementById('hist-prov-tbody').innerHTML = rows;
   document.getElementById('hist-prov-count').textContent = HIST_PROV_ITEM.porProveedor.length;
+  vtApplyCollapse('hist-prov-tbody', 5);
 }
 
 function renderProveedoresTab() { renderTopProv(); renderConcentracion(); renderTendenciaProveedor(); renderHistProvTable(); }
@@ -2626,6 +2684,7 @@ function renderHistItemTable() {
   }).join('');
   document.getElementById('hist-item-tbody').innerHTML = rows;
   document.getElementById('hist-item-count').textContent = HIST_PROV_ITEM.porItem.length;
+  vtApplyCollapse('hist-item-tbody', 5);
 }
 
 function renderItemsTab() { renderTopItems(); renderHistItemTable(); }
@@ -2718,6 +2777,7 @@ function renderOcPendTable() {
     <td class="num">${fmtM(r.valorPend)}</td>
     <td>${r.comprador}</td>
   </tr>`).join('');
+  vtApplyCollapse('oc-pend-tbody', 5);
 }
 
 function renderOcsTab() { renderEstadoOC(); renderFulfillment(); renderEstadoFacturas(); renderAlertas(); renderOcPendTable(); }
@@ -2861,6 +2921,7 @@ function renderOtifTab() {
     otPctMTable, otOkMInt, otTardeM, agg.otPct, agg.otOk, agg.n - agg.otOk);
   document.getElementById('otif-ontime-thead').innerHTML = ontime.thead;
   document.getElementById('otif-ontime-tbody').innerHTML = ontime.tbody;
+  vtApplyCollapse('otif-ontime-tbody', 5);
 
   const ifIncompM = nM.map((n,i) => Math.round(n - ifOkM[i]));
   const ifOkMInt = ifOkM.map(v => Math.round(v));
@@ -2869,6 +2930,7 @@ function renderOtifTab() {
     ifPctMTable, ifOkMInt, ifIncompM, agg.ifPct, agg.ifOk, agg.n - agg.ifOk);
   document.getElementById('otif-infull-thead').innerHTML = infull.thead;
   document.getElementById('otif-infull-tbody').innerHTML = infull.tbody;
+  vtApplyCollapse('otif-infull-tbody', 5);
 
   // Distribución de cumplimiento (derivada del bucket/periodo activo, sobre el mismo n)
   destroyChart('ch-otif-dist');
@@ -2992,6 +3054,9 @@ function renderBeneficiosTab() {
   document.getElementById('benef-admin-tbody').innerHTML = benefRowsHtml(p.admin);
   document.getElementById('benef-producto-tbody').innerHTML = benefRowsHtml(p.producto);
   document.getElementById('benef-servicio-tbody').innerHTML = benefRowsHtml(p.servicio);
+  vtApplyCollapse('benef-admin-tbody', 5);
+  vtApplyCollapse('benef-producto-tbody', 5);
+  vtApplyCollapse('benef-servicio-tbody', 5);
 
   const grpAvg = (grupo) => {
     const vals = Object.values(grupo).map(v => v.calif).filter(v => v != null);
@@ -3061,6 +3126,7 @@ function renderBeneficiosTab() {
     const rowAttrs = x.nombre === p.nombre ? ' style="background:rgba(212,175,55,0.18);font-weight:700"' : '';
     return `<tr${rowAttrs}><td>${x.nombre}</td>${cells}<td class="num">${x.total==null?'–':x.total.toFixed(2)}</td></tr>`;
   }).join('');
+  vtApplyCollapse('benef-cat-table-tbody', 5);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -3146,6 +3212,7 @@ function renderBodegaItemTable() {
   tbody.innerHTML = combos.map(([b, it, gasto, fact]) => `
     <tr><td>${b}</td><td>${it.length > 44 ? it.slice(0,42)+'…' : it}</td>
       <td class="num">${fmt(gasto)}</td><td class="num">${fact.toLocaleString('es-CO')}</td></tr>`).join('');
+  vtApplyCollapse('bodega-item-tbody', 5);
   document.getElementById('bodega-item-count').textContent = combos.length.toLocaleString('es-CO');
   const sub = document.getElementById('bodega-item-sub');
   if (sub) sub.textContent = `Qué ítems compra cada bodega y por cuánto · ${distribPeriodoLbl()}`;
@@ -3209,6 +3276,7 @@ function renderPreciosTab() {
       </tr>`;
     }).join('');
   }
+  vtApplyCollapse('precios-tbody', 5);
 
   renderSobrecostoAhorroChart(rows.length ? rows : PRICE_DATA.priceVariation);
 
@@ -3410,6 +3478,7 @@ function renderNegociacionesTab() {
       <td class="num">${negFmtPct(p.reduccionPct)}</td>
       <td><span class="estado-badge ${NEG_ESTADO_CLS[p.estado] || 'estado-sin-estado'}">${p.estado}</span></td>
     </tr>`).join('') : `<tr><td colspan="6" style="text-align:center;color:var(--text-light);padding:1.5rem">Sin productos para el filtro seleccionado.</td></tr>`;
+  vtApplyCollapse('neg-tbody', 5);
 
   document.getElementById('neg-tfoot').innerHTML = rows.length ? `<tr style="font-weight:700;background:var(--wine-ghost)">
       <td>TOTAL</td><td></td><td></td>
@@ -3771,6 +3840,7 @@ function renderAjustesCharts() {
     <td class="num">${fmtM(costoSalida)}</td>
     <td class="num">${fmtM(costoProm)}</td>
   </tr>`;
+  vtApplyCollapse('ajustes-tipos-tbody', 5);
 }
 
 function renderAjustesTab() { renderAjustesKPIs(); renderAjustesCharts(); }
@@ -3878,6 +3948,7 @@ function renderDevolucionesCharts() {
   document.getElementById('dev-items-tbody').innerHTML = itemsData.map(r =>
     `<tr class="${matchAnyName(filterItems,r.item)&&filterItems.length?'is-active':''}"><td>${r.item}</td><td>${r.um}</td><td class="num">${r.cant.toLocaleString('es-CO')}</td></tr>`
   ).join('');
+  vtApplyCollapse('dev-items-tbody', 5);
 }
 
 function renderDevolucionesTab() { renderDevolucionesKPIs(); renderDevolucionesCharts(); }
@@ -3996,6 +4067,7 @@ function renderMermasCharts() {
     <td class="num">${fmtM(r.costo)}</td>
     <td style="font-size:0.72rem">${r.mot}</td>
   </tr>`).join('');
+  vtApplyCollapse('mermas-detalle-tbody', 5);
 }
 
 function renderMermasTab() { renderMermasKPIs(); renderMermasCharts(); }
@@ -4291,6 +4363,7 @@ function renderDetOCTab() {
     <td class="num">$${r.pr.toLocaleString('es-CO')}</td>
     <td class="num">${fmtM(r.neto)}</td>
   </tr>`).join('');
+  vtApplyCollapse('doc-tabla-tbody', 5);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -4310,7 +4383,7 @@ function parseSortCell(text) {
 function sortTableByColumn(table, colIdx, th) {
   const tbody = table.tBodies[0];
   if (!tbody) return;
-  const rows = Array.from(tbody.rows);
+  const rows = vtDataRows(tbody); // excluye la fila "Ver más/Ver menos" (no es un dato)
   const isNumCol = rows.every(r => { const c = r.cells[colIdx]; return !c || parseSortCell(c.textContent).num !== null || !c.textContent.trim(); });
   const prevDir = th.getAttribute('data-sort-dir');
   const dir = prevDir === 'asc' ? 'desc' : 'asc';
@@ -4323,6 +4396,7 @@ function sortTableByColumn(table, colIdx, th) {
     return mult * v1.raw.localeCompare(v2.raw, 'es', { numeric: true, sensitivity: 'base' });
   });
   rows.forEach(r => tbody.appendChild(r));
+  vtReapplyVisibility(tbody); // recalcula qué filas van ocultas/visibles con el nuevo orden
   table.querySelectorAll('thead th.sortable').forEach(h => { h.classList.remove('sort-asc','sort-desc'); h.removeAttribute('data-sort-dir'); });
   th.setAttribute('data-sort-dir', dir);
   th.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
