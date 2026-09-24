@@ -924,6 +924,26 @@ footer strong { color: rgba(255,255,255,0.8); }
       <div class="chart-wrap" style="height:260px"><canvas id="ch-otif-mejor-prov"></canvas></div>
     </div>
   </div>
+
+  <div class="chart-grid-1">
+    <div class="chart-card">
+      <div class="card-title">Clasificación de Proveedores — Calidad, Plazo de Pago y Lead Time (<span id="otif-clasif-count">–</span>)</div>
+      <div class="card-sub">Calificación 1 (bajo) a 5 (alto) por proveedor — misma fuente que la pestaña "Beneficios Proveedor" (ficha BD REAL, no depende del período de fechas activo)</div>
+      <div style="overflow-x:auto">
+        <table class="data-table" id="otif-clasif-table">
+          <thead><tr>
+            <th>Proveedor</th>
+            <th>Calidad del Producto</th>
+            <th>Plazo de Pago (Crédito)</th>
+            <th>Lead Time (Tiempo de Entrega)</th>
+            <th>Promedio Total</th>
+          </tr></thead>
+          <tbody id="otif-clasif-tbody"></tbody>
+        </table>
+      </div>
+      <div class="card-note">ⓘ Entre paréntesis, el dato real reportado en la ficha del proveedor (días de crédito, días de tiempo de entrega). Solo cubre los proveedores con ficha en "BD REAL" — usa el filtro de proveedor de la barra superior.</div>
+    </div>
+  </div>
 </section>
 
 <!-- ══ TAB BENEFICIOS ══ -->
@@ -2978,6 +2998,33 @@ function renderOtifTab() {
       tooltip: { ...TOOLTIP_BASE, callbacks: { label: c => c.raw.toFixed(1) + '% OTIF · ' + mejor[c.dataIndex].n + ' líneas' } } },
       scales: { ...baseOpts.scales, x: { ...baseOpts.scales.x, min: 0, max: 100, ticks: { ...baseOpts.scales.x.ticks, callback: v => v+'%' } } } }
   });
+
+  renderOtifClasificacionTable();
+}
+
+// Reusa BENEFICIOS_DATA (ficha BD REAL) para mostrar, dentro de OTIF, la
+// calificación de Calidad/Plazo de pago/Lead Time que la pestaña "Beneficios
+// Proveedor" ya calcula — sin duplicar el cálculo.
+function renderOtifClasificacionTable() {
+  const tbody = document.getElementById('otif-clasif-tbody');
+  if (!tbody) return;
+  let rows = (BENEFICIOS_DATA.providers || []).slice();
+  if (filterProvs.length) rows = rows.filter(p => matchAnyName(filterProvs, p.nombre));
+  rows.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  document.getElementById('otif-clasif-count').textContent = rows.length;
+  const scoreCell = campo => {
+    if (!campo || campo.calif == null) return '<span style="color:var(--text-light)">–</span>';
+    const detalle = campo.resultado != null ? ` <span style="color:var(--text-muted);font-size:.7rem">(${campo.resultado}${campo.um === 'DÍAS' ? ' días' : ''})</span>` : '';
+    return `${campo.calif} / 5${detalle}`;
+  };
+  tbody.innerHTML = rows.length ? rows.map(p => `<tr>
+      <td>${p.nombre}</td>
+      <td class="num">${scoreCell(p.producto['Calidad del Producto'])}</td>
+      <td class="num">${scoreCell(p.admin['Crédito'])}</td>
+      <td class="num">${scoreCell(p.admin['Tiempo de Entrega'])}</td>
+      <td class="num">${p.total != null ? p.total.toFixed(2) : '–'}</td>
+    </tr>`).join('') : `<tr><td colspan="5" style="text-align:center;color:var(--text-light);padding:1.5rem">Sin proveedores con ficha para el filtro seleccionado.</td></tr>`;
+  vtApplyCollapse('otif-clasif-tbody', 5);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
