@@ -216,6 +216,30 @@ main { padding: 2rem; max-width: 1600px; margin: 0 auto; }
 .btn-upload:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(183,162,84,0.35); }
 .neg-file-name { font-size: 0.72rem; color: var(--text-muted); margin-left: 8px; }
 
+/* ── NEGOCIACIONES: resumen mensual (Julio/Agosto/Septiembre) estilo Excel ── */
+.neg-resumen-grid {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 0;
+  border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-sm);
+  margin-bottom: 1.25rem;
+}
+.neg-resumen-block { display: flex; flex-direction: column; }
+.neg-resumen-top {
+  display: flex; align-items: baseline; justify-content: center; gap: 1.5rem;
+  padding: 1.1rem 1rem; font-family: 'Lato'; font-size: 1.5rem; font-weight: 700; color: var(--charcoal);
+}
+.neg-resumen-top span:last-child { font-size: 1.1rem; }
+.neg-resumen-bottom {
+  display: flex; color: #fff; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.neg-resumen-bottom span { flex: 1; text-align: center; padding: 0.5rem 0.5rem; }
+.neg-resumen-jul .neg-resumen-top { background: #DCE6F1; }
+.neg-resumen-jul .neg-resumen-bottom { background: var(--blue-neg, #4B6E8A); }
+.neg-resumen-ago .neg-resumen-top { background: var(--olive-pale); }
+.neg-resumen-ago .neg-resumen-bottom { background: #16A34A; }
+.neg-resumen-sep .neg-resumen-top { background: var(--gold-light); }
+.neg-resumen-sep .neg-resumen-bottom { background: var(--gold); }
+
 /* ── ACTUALIZAR DATOS ── */
 .btn-publish {
   background: var(--olive); color: #fff; border: none; border-radius: 999px; padding: 0.65rem 1.5rem;
@@ -1158,21 +1182,18 @@ footer strong { color: rgba(255,255,255,0.8); }
     <span class="filter-info" id="neg-source-info"></span>
   </div>
 
-  <div class="hero-grid" style="grid-template-columns:repeat(3,1fr)">
-    <div class="kpi-card featured">
-      <div class="kpi-label">Ahorro Mensual Identificado</div>
-      <div class="kpi-val" id="neg-kpi-mensual">–</div>
-      <div class="kpi-sub">Suma del ahorro mensual de todos los productos</div>
+  <div class="neg-resumen-grid">
+    <div class="neg-resumen-block neg-resumen-jul">
+      <div class="neg-resumen-top"><span id="neg-resumen-jul-val">–</span><span id="neg-resumen-jul-pct">–</span></div>
+      <div class="neg-resumen-bottom"><span>Julio</span><span>Ahorro %</span></div>
     </div>
-    <div class="kpi-card" style="border-top-color:var(--olive)">
-      <div class="kpi-label">Proyección Anual</div>
-      <div class="kpi-val" id="neg-kpi-anual">–</div>
-      <div class="kpi-sub">Ahorro mensual × 12</div>
+    <div class="neg-resumen-block neg-resumen-ago">
+      <div class="neg-resumen-top"><span id="neg-resumen-ago-val">–</span><span id="neg-resumen-ago-pct">–</span></div>
+      <div class="neg-resumen-bottom"><span>Agosto</span><span>Ahorro %</span></div>
     </div>
-    <div class="kpi-card" style="border-top-color:var(--gold)">
-      <div class="kpi-label">Ahorro % vs Precio de Base</div>
-      <div class="kpi-val" id="neg-kpi-pct">–</div>
-      <div class="kpi-sub">Participación del ahorro sobre el gasto base</div>
+    <div class="neg-resumen-block neg-resumen-sep">
+      <div class="neg-resumen-top"><span id="neg-resumen-sep-val">–</span><span id="neg-resumen-sep-pct">–</span></div>
+      <div class="neg-resumen-bottom"><span>Septiembre</span><span>Ahorro %</span></div>
     </div>
   </div>
 
@@ -1197,8 +1218,17 @@ footer strong { color: rgba(255,255,255,0.8); }
     </div>
     <div class="chart-card">
       <div class="card-title">Participación en el Ahorro</div>
-      <div class="card-sub">Ahorro mensual $ y % sobre el Ahorro Mensual Identificado ($<span id="neg-part-total"></span>)</div>
-      <ul class="pareto-list" id="neg-participacion-list" style="max-height:480px; overflow-y:auto"></ul>
+      <div class="card-sub">Ahorro mensual $ y % sobre el ahorro total identificado ($<span id="neg-part-total"></span>)</div>
+      <div style="overflow: auto; max-height: 480px">
+        <table class="data-table" id="neg-part-table">
+          <thead><tr>
+            <th style="position:sticky; top:0; background:#fff; z-index:1">Producto</th>
+            <th style="position:sticky; top:0; background:#fff; z-index:1">Ahorro mensual</th>
+            <th style="position:sticky; top:0; background:#fff; z-index:1">Participación en el ahorro</th>
+          </tr></thead>
+          <tbody id="neg-part-tbody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </section>
@@ -3487,7 +3517,7 @@ function syncDualScrollbar(table) {
 // ══════════════════════════════════════════════════════════════════════════
 // TAB NEGOCIACIONES — carga dinámica de Excel (SheetJS), sin recargar la app
 // ══════════════════════════════════════════════════════════════════════════
-let NEG_DATA = {"kpis":{"ahorroMensualTotal":82240908.5,"proyeccionAnual":986890902,"pctAhorroSobreCompraBase":0.14182082109795935},"productos":[{"producto":"Comino molido","precioActual":34000,"precioNuevo":22941,"ahorroMensual":16588.5,"reduccionPct":0.32526470588235296,"ahorroAnual":199062,"estado":"PRUEBA"},{"producto":"Pimienta negra","precioActual":46000,"precioNuevo":37222,"ahorroMensual":175560,"reduccionPct":0.19082608695652173,"ahorroAnual":2106720,"estado":"PENDIENTE"},{"producto":"Cebolla en polvo","precioActual":18000,"precioNuevo":13000,"ahorroMensual":150000,"reduccionPct":0.2777777777777778,"ahorroAnual":1800000,"estado":"PENDIENTE"},{"producto":"Snow Flake G2141","precioActual":17400,"precioNuevo":13800,"ahorroMensual":720000,"reduccionPct":0.20689655172413793,"ahorroAnual":8640000,"estado":"EJECUTADO"},{"producto":"Carne molida cañón","precioActual":13500,"precioNuevo":12500,"ahorroMensual":1120000,"reduccionPct":0.07407407407407407,"ahorroAnual":13440000,"estado":"EJECUTADO"},{"producto":"Recorte de pechuga","precioActual":13000,"precioNuevo":12300,"ahorroMensual":1680000,"reduccionPct":0.05384615384615385,"ahorroAnual":20160000,"estado":"EJECUTADO"},{"producto":"Tilapia","precioActual":10500,"precioNuevo":9800,"ahorroMensual":700000,"reduccionPct":0.06666666666666667,"ahorroAnual":8400000,"estado":"EJECUTADO"},{"producto":"Camarón 71/90 30% glaceo","precioActual":23500,"precioNuevo":19000,"ahorroMensual":9000000,"reduccionPct":0.19148936170212766,"ahorroAnual":108000000,"estado":"PENDIENTE"},{"producto":"Vinipel","precioActual":7300,"precioNuevo":6500,"ahorroMensual":480000,"reduccionPct":0.1095890410958904,"ahorroAnual":5760000,"estado":"EJECUTADO"},{"producto":"Solomo redondo (actuales +1 nuevo)","precioActual":46250,"precioNuevo":45800,"ahorroMensual":1350000,"reduccionPct":0.00972972972972973,"ahorroAnual":16200000,"estado":"EJECUTANDO"},{"producto":"Aceite mezcla soya+palma","precioActual":8500,"precioNuevo":8000,"ahorroMensual":1500000,"reduccionPct":0.058823529411764705,"ahorroAnual":18000000,"estado":"PENDIENTE"},{"producto":"Filete de Bassa","precioActual":12000,"precioNuevo":11000,"ahorroMensual":1000000,"reduccionPct":0.08333333333333333,"ahorroAnual":12000000,"estado":"EJECUTANDO"},{"producto":"Pasta de tomate Bary","precioActual":18000,"precioNuevo":15528,"ahorroMensual":197760,"reduccionPct":0.13733333333333334,"ahorroAnual":2373120,"estado":"EJECUTANDO"},{"producto":"Mostaza","precioActual":43400,"precioNuevo":39060,"ahorroMensual":434000,"reduccionPct":0.1,"ahorroAnual":5208000,"estado":"EJECUTANDO"},{"producto":"Solomo con cascara","precioActual":46250,"precioNuevo":29900,"ahorroMensual":49050000,"reduccionPct":0.3535135135135135,"ahorroAnual":588600000,"estado":"PENDIENTE"},{"producto":"Filete de pollo","precioActual":24500,"precioNuevo":23500,"ahorroMensual":390000,"reduccionPct":0.04081632653061224,"ahorroAnual":4680000,"estado":"EJECUTANDO"},{"producto":"Pechuga","precioActual":12200,"precioNuevo":11500,"ahorroMensual":2030000,"reduccionPct":0.05737704918032787,"ahorroAnual":24360000,"estado":"EJECUTANDO"},{"producto":"Sello de seguridad","precioActual":110,"precioNuevo":100,"ahorroMensual":200000,"reduccionPct":0.09090909090909091,"ahorroAnual":2400000,"estado":"EJECUTANDO"},{"producto":"Rollo caja","precioActual":13458,"precioNuevo":11138,"ahorroMensual":580000,"reduccionPct":0.1723881706048447,"ahorroAnual":6960000,"estado":"EJECUTANDO"},{"producto":"Pasta larga","precioActual":30076,"precioNuevo":29029,"ahorroMensual":1047000,"reduccionPct":0.03481181008112781,"ahorroAnual":12564000,"estado":"EJECUTANDO"},{"producto":"Pasta corta","precioActual":32056,"precioNuevo":29000,"ahorroMensual":2903200,"reduccionPct":0.0953331669578238,"ahorroAnual":34838400,"estado":"EJECUTANDO"},{"producto":"Pasta de tomate","precioActual":12664,"precioNuevo":9953,"ahorroMensual":4066500,"reduccionPct":0.2140713834491472,"ahorroAnual":48798000,"estado":"EJECUTANDO"},{"producto":"Dados de tomate","precioActual":7080,"precioNuevo":5469,"ahorroMensual":3383100,"reduccionPct":0.22754237288135593,"ahorroAnual":40597200,"estado":"EJECUTANDO"},{"producto":"Aceite de oliva","precioActual":102935,"precioNuevo":96215,"ahorroMensual":67200,"reduccionPct":0.06528391703502211,"ahorroAnual":806400,"estado":"EJECUTANDO"}],"sourceLabel":"AHORROS A SEPT.xlsx"};
+let NEG_DATA = {"kpis":{"julioMonto":789677.4193548387,"julioPct":0.05494209534069486,"agostoMonto":3395483.870967742,"agostoPct":0.02762381642207806,"septiembreMonto":18607850.666666664,"septiembrePct":0.06714179150612956,"ahorroMensualTotal":34507760.0,"proyeccionAnual":414093120.0,"pctAhorroSobreCompraBase":0.09077991347594414},"productos":[{"producto":"Comino molido","precioActual":34000.0,"precioNuevo":22941.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PRUEBA"},{"producto":"Pimienta negra","precioActual":46000.0,"precioNuevo":37222.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE"},{"producto":"Cebolla en polvo","precioActual":18000.0,"precioNuevo":13000.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE"},{"producto":"Snow Flake G2141","precioActual":17400.0,"precioNuevo":13800.0,"ahorroMensual":720000.0,"reduccionPct":0.20689655172413793,"ahorroAnual":8640000.0,"estado":"EJECUTANDO"},{"producto":"Carne molida cañón","precioActual":13500.0,"precioNuevo":12500.0,"ahorroMensual":1120000.0,"reduccionPct":0.07407407407407407,"ahorroAnual":13440000.0,"estado":"EJECUTANDO"},{"producto":"Recorte de pechuga","precioActual":13000.0,"precioNuevo":12300.0,"ahorroMensual":1680000.0,"reduccionPct":0.05384615384615385,"ahorroAnual":20160000.0,"estado":"EJECUTANDO"},{"producto":"Tilapia","precioActual":10500.0,"precioNuevo":9800.0,"ahorroMensual":700000.0,"reduccionPct":0.06666666666666667,"ahorroAnual":8400000.0,"estado":"EJECUTANDO"},{"producto":"Camarón 71/90 30% glaceo","precioActual":23500.0,"precioNuevo":19800.0,"ahorroMensual":7400000.0,"reduccionPct":0.1574468085106383,"ahorroAnual":88800000.0,"estado":"EJECUTANDO"},{"producto":"Vinipel","precioActual":7300.0,"precioNuevo":6500.0,"ahorroMensual":480000.0,"reduccionPct":0.1095890410958904,"ahorroAnual":5760000.0,"estado":"EJECUTANDO"},{"producto":"Solomo redondo (actuales +1 nuevo)","precioActual":46250.0,"precioNuevo":45800.0,"ahorroMensual":1350000.0,"reduccionPct":0.00972972972972973,"ahorroAnual":16200000.0,"estado":"EJECUTANDO"},{"producto":"Aceite mezcla soya+palma","precioActual":8500.0,"precioNuevo":8000.0,"ahorroMensual":1500000.0,"reduccionPct":0.058823529411764705,"ahorroAnual":18000000.0,"estado":"EJECUTANDO"},{"producto":"Filete de Bassa","precioActual":12000.0,"precioNuevo":10500.0,"ahorroMensual":1500000.0,"reduccionPct":0.125,"ahorroAnual":18000000.0,"estado":"EJECUTANDO"},{"producto":"Pasta de tomate Bary","precioActual":18000.0,"precioNuevo":15528.0,"ahorroMensual":197760.0,"reduccionPct":0.13733333333333334,"ahorroAnual":2373120.0,"estado":"EJECUTANDO"},{"producto":"Mostaza","precioActual":43400.0,"precioNuevo":39060.0,"ahorroMensual":434000.0,"reduccionPct":0.1,"ahorroAnual":5208000.0,"estado":"EJECUTANDO"},{"producto":"Solomo con cascara","precioActual":46250.0,"precioNuevo":29900.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE"},{"producto":"Filete de pollo","precioActual":24500.0,"precioNuevo":23500.0,"ahorroMensual":390000.0,"reduccionPct":0.04081632653061224,"ahorroAnual":4680000.0,"estado":"EJECUTANDO"},{"producto":"Sello de seguridad","precioActual":110.0,"precioNuevo":100.0,"ahorroMensual":200000.0,"reduccionPct":0.09090909090909091,"ahorroAnual":2400000.0,"estado":"EJECUTANDO"},{"producto":"Rollo termico caja","precioActual":13458.0,"precioNuevo":11138.0,"ahorroMensual":580000.0,"reduccionPct":0.1723881706048447,"ahorroAnual":6960000.0,"estado":"EJECUTANDO"},{"producto":"Garbanzo X KG","precioActual":9340.0,"precioNuevo":6532.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE"},{"producto":"Salmon 2-3","precioActual":39000.0,"precioNuevo":37000.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE"},{"producto":"Queso mozarella tajado 800grs","precioActual":35000.0,"precioNuevo":27000.0,"ahorroMensual":16000000.0,"reduccionPct":0.22857142857142856,"ahorroAnual":192000000.0,"estado":"EJECUTANDO"},{"producto":"Mejillon chorito","precioActual":6480.0,"precioNuevo":5200.0,"ahorroMensual":256000.0,"reduccionPct":0.19753086419753085,"ahorroAnual":3072000.0,"estado":"EJECUTANDO"}],"sourceLabel":"AHORROS A SEPT.xlsx"};
 
 const NEG_ESTADO_CLS = {
   'EJECUTADO': 'estado-ejecutado', 'EJECUTANDO': 'estado-ejecutando',
@@ -3502,19 +3532,19 @@ function safeNum(v) { return typeof v === 'number' ? v : null; }
 function parseNegWorkbook(wb) {
   const sheetName = wb.SheetNames.includes('RESUMEN') ? 'RESUMEN' : wb.SheetNames[0];
   const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, raw: true, defval: null });
-  const kpiRow = rows[2] || [];
+  const mesRow = rows[2] || [];
   const kpis = {
-    ahorroMensualTotal: safeNum(kpiRow[0]),
-    proyeccionAnual: safeNum(kpiRow[3]),
-    pctAhorroSobreCompraBase: safeNum(kpiRow[6])
+    julioMonto: safeNum(mesRow[0]), julioPct: safeNum(mesRow[1]),
+    agostoMonto: safeNum(mesRow[3]), agostoPct: safeNum(mesRow[4]),
+    septiembreMonto: safeNum(mesRow[6]), septiembrePct: safeNum(mesRow[7])
   };
   const productos = [];
+  let totalRow = null;
   for (let i = 6; i < rows.length; i++) {
     const row = rows[i] || [];
     const prod = row[0];
     if (prod === null || prod === undefined) break;
-    if (typeof prod === 'string' && prod.trim().toUpperCase() === 'TOTAL') break;
-    if (typeof prod === 'number' && prod === 0) break;
+    if (typeof prod === 'string' && prod.trim().toUpperCase() === 'TOTAL') { totalRow = row; break; }
     const estadoRaw = row[6];
     const estado = (estadoRaw === null || estadoRaw === undefined || estadoRaw === 0 || estadoRaw === '0')
       ? 'SIN ESTADO' : String(estadoRaw).trim().toUpperCase();
@@ -3525,6 +3555,10 @@ function parseNegWorkbook(wb) {
       ahorroAnual: safeNum(row[5]), estado
     });
   }
+  const ahorroMensualTotal = totalRow ? safeNum(totalRow[3]) : productos.reduce((a, p) => a + (p.ahorroMensual || 0), 0);
+  kpis.ahorroMensualTotal = ahorroMensualTotal;
+  kpis.proyeccionAnual = totalRow ? safeNum(totalRow[5]) : (ahorroMensualTotal || 0) * 12;
+  kpis.pctAhorroSobreCompraBase = totalRow ? safeNum(totalRow[4]) : null;
   return { kpis, productos };
 }
 
@@ -3560,20 +3594,26 @@ function populateNegFilters() {
   if (estados.includes(curEst)) selEst.value = curEst;
 }
 
+function renderNegResumenMensual() {
+  const k = NEG_DATA.kpis;
+  document.getElementById('neg-resumen-jul-val').textContent = negFmt(k.julioMonto);
+  document.getElementById('neg-resumen-jul-pct').textContent = negFmtPct(k.julioPct);
+  document.getElementById('neg-resumen-ago-val').textContent = negFmt(k.agostoMonto);
+  document.getElementById('neg-resumen-ago-pct').textContent = negFmtPct(k.agostoPct);
+  document.getElementById('neg-resumen-sep-val').textContent = negFmt(k.septiembreMonto);
+  document.getElementById('neg-resumen-sep-pct').textContent = negFmtPct(k.septiembrePct);
+}
+
 function renderNegociacionesTab() {
   document.getElementById('neg-source-info').textContent = 'Fuente: ' + NEG_DATA.sourceLabel;
+  renderNegResumenMensual();
   const fProd = document.getElementById('neg-f-producto').value;
   const fEst = document.getElementById('neg-f-estado').value;
   let rows = NEG_DATA.productos;
   if (fProd) rows = rows.filter(p => p.producto === fProd);
   if (fEst) rows = rows.filter(p => p.estado === fEst);
 
-  const filtered = fProd || fEst;
   const sumMensual = rows.reduce((a, p) => a + (p.ahorroMensual || 0), 0);
-  const sumAnual = rows.reduce((a, p) => a + (p.ahorroAnual || 0), 0);
-  document.getElementById('neg-kpi-mensual').textContent = negFmt(filtered ? sumMensual : NEG_DATA.kpis.ahorroMensualTotal);
-  document.getElementById('neg-kpi-anual').textContent = negFmt(filtered ? sumAnual : NEG_DATA.kpis.proyeccionAnual);
-  document.getElementById('neg-kpi-pct').textContent = negFmtPct(NEG_DATA.kpis.pctAhorroSobreCompraBase);
   document.getElementById('neg-count').textContent = rows.length;
 
   const tbody = document.getElementById('neg-tbody');
@@ -3593,28 +3633,25 @@ function renderNegociacionesTab() {
       <td></td>
     </tr>` : '';
 
-  renderNegParticipacionList(rows.length ? rows : NEG_DATA.productos);
+  renderNegParticipacionTable(rows.length ? rows : NEG_DATA.productos);
 }
 
-// Misma fórmula que Excel (RESUMEN, tabla "Participación en el ahorro"): % = Ahorro mensual del producto / $A$3 (Ahorro Mensual Identificado, KPI fijo)
-function renderNegParticipacionList(rows) {
-  const el = document.getElementById('neg-participacion-list');
+// Misma fórmula que Excel (RESUMEN, tabla "Producto | Ahorro mensual | Participación en el ahorro"):
+// % = Ahorro mensual del producto / Ahorro Mensual Identificado (TOTAL), en el mismo orden del detalle.
+function renderNegParticipacionTable(rows) {
+  const tbody = document.getElementById('neg-part-tbody');
   const total = NEG_DATA.kpis.ahorroMensualTotal || 0;
   document.getElementById('neg-part-total').textContent = Math.round(total).toLocaleString('es-CO');
-  const withVal = rows.filter(p => p.ahorroMensual > 0).slice().sort((a, b) => b.ahorroMensual - a.ahorroMensual);
-  if (!withVal.length) { el.innerHTML = '<li style="padding:1rem;color:var(--text-light)">Sin datos para el filtro seleccionado.</li>'; return; }
-  const maxVal = withVal[0].ahorroMensual;
-  el.innerHTML = withVal.map((p, i) => {
-    const pct = total ? (p.ahorroMensual / total * 100) : 0;
-    const fill = (p.ahorroMensual / maxVal * 100).toFixed(0);
-    return `<li class="pareto-item">
-      <span class="pareto-rank">${i + 1}</span>
-      <span class="pareto-name">${p.producto.length > 30 ? p.producto.slice(0, 28) + '…' : p.producto}</span>
-      <span class="pareto-val">${negFmt(p.ahorroMensual)}</span>
-      <span class="pareto-pct">${pct.toFixed(1)}%</span>
-      <div class="pareto-bar-wrap"><div class="pareto-bar-fill" style="width:${fill}%;background:${PALETTE[i % PALETTE.length]}"></div></div>
-    </li>`;
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-light);padding:1.5rem">Sin datos para el filtro seleccionado.</td></tr>'; return; }
+  tbody.innerHTML = rows.map(p => {
+    const pct = total ? (p.ahorroMensual || 0) / total : 0;
+    return `<tr>
+      <td>${p.producto}</td>
+      <td class="num">${negFmt(p.ahorroMensual)}</td>
+      <td class="num">${negFmtPct(pct)}</td>
+    </tr>`;
   }).join('');
+  vtApplyCollapse('neg-part-tbody', 5);
 }
 
 let currentTab = 'resumen';
