@@ -472,7 +472,7 @@ footer strong { color: rgba(255,255,255,0.8); }
       <span class="live-dot" id="compras-status-dot"></span>
       <span id="compras-status-text">Período: Ene 2025 — Ago 2026</span>
     </div>
-    <button type="button" class="btn-connect" id="compras-btn-connect" title="Conecta la carpeta con los 7 Excel para leer datos en vivo, sin subirlos uno por uno">🔗 Conectar carpeta en vivo</button>
+    <button type="button" class="btn-connect" id="compras-btn-connect" title="Conecta la carpeta con los 8 Excel para leer datos en vivo, sin subirlos uno por uno">🔗 Conectar carpeta en vivo</button>
     <button type="button" class="btn-connect" id="compras-btn-refresh" disabled>↻ Actualizar ahora</button>
   </div>
 </header>
@@ -1567,7 +1567,7 @@ footer strong { color: rgba(255,255,255,0.8); }
 <section id="tab-actualizar" class="tab-panel">
   <h2 class="section-title">Actualizar datos</h2>
   <div style="font-size:0.82rem; color:var(--text-muted); max-width:920px; margin-bottom:0.75rem; line-height:1.5">Cada tarjeta reemplaza un insumo del cálculo con el archivo que adjuntes. Se leen .xlsx, .xlsb y .csv, se detectan los encabezados aunque cambie el orden de las columnas, y la herramienta se recalcula al instante.</div>
-  <div style="font-size:0.78rem; color:var(--wine); max-width:920px; margin-bottom:1.5rem; line-height:1.5; background:var(--wine-pale); border-radius:8px; padding:0.6rem 0.9rem">ⓘ Si abres este archivo con doble clic (no desde un servidor web), el navegador a veces no recuerda lo publicado al cerrarlo del todo. Por eso, al publicar se descarga automáticamente un archivo de respaldo (<em>montolivo_respaldo.json</em>) — guárdalo, y si alguna vez abres el tablero y ves los datos de fábrica, usa el botón "Cargar respaldo" para recuperarlo en 2 clics, sin tener que volver a subir los 7 Excel.</div>
+  <div style="font-size:0.78rem; color:var(--wine); max-width:920px; margin-bottom:1.5rem; line-height:1.5; background:var(--wine-pale); border-radius:8px; padding:0.6rem 0.9rem">ⓘ Si abres este archivo con doble clic (no desde un servidor web), el navegador a veces no recuerda lo publicado al cerrarlo del todo. Por eso, al publicar se descarga automáticamente un archivo de respaldo (<em>montolivo_respaldo.json</em>) — guárdalo, y si alguna vez abres el tablero y ves los datos de fábrica, usa el botón "Cargar respaldo" para recuperarlo en 2 clics, sin tener que volver a subir los 8 Excel.</div>
 
   <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-bottom:1.5rem; flex-wrap:wrap">
     <button class="btn-secondary-outline" onclick="actualizarDescartar()">Volver a los datos publicados</button>
@@ -5957,7 +5957,7 @@ async function actualizarPublicar(silent) {
 
 /* ══════════════════════════════════════════════════════════════════════════
    CONEXIÓN EN VIVO — mismo mecanismo que Tablero_Control_Interno.html: un botón
-   único que encuentra los 7 Excel por su nombre exacto (ACTUALIZAR_FILES, arriba)
+   único que encuentra los 8 Excel por su nombre exacto (ACTUALIZAR_FILES, arriba)
    en la carpeta elegida, los hace pasar por el MISMO motor de "Actualizar datos"
    que ya existía (actualizarIngestWorkbook + actualizarPublicar) y recuerda la
    carpeta entre sesiones — sin tener que adjuntar cada tarjeta a mano.
@@ -5995,7 +5995,7 @@ async function comprasTryAutoLoadFromDisk(silent) {
     }
     if (!silent) comprasSetStatus('', 'Leyendo archivos…');
 
-    // busca, por nombre EXACTO (como ya hace cada tarjeta), cuáles de los 7 archivos
+    // busca, por nombre EXACTO (como ya hace cada tarjeta), cuáles de los 8 archivos
     // esperados están presentes en la carpeta elegida.
     const found = {};
     for await (const handle of dirHandle.values()) {
@@ -6006,7 +6006,7 @@ async function comprasTryAutoLoadFromDisk(silent) {
     }
     const faltan = ACTUALIZAR_FILES.filter(f => !found[f.id]);
     if (Object.keys(found).length === 0) {
-      throw new Error('No se encontró ninguno de los 7 Excel esperados en la carpeta seleccionada.');
+      throw new Error('No se encontró ninguno de los 8 Excel esperados en la carpeta seleccionada.');
     }
 
     const errores = [];
@@ -6388,6 +6388,43 @@ function vkpi(ag){
   document.getElementById("v-kpi-lineas-n").textContent=vcn(ag.n-ag.incumpl)+" / "+vcn(ag.n)+" líneas completas";
 }
 
+// ============ Ordenamiento de columnas (clic en encabezado = menor a mayor / mayor a menor) ============
+var V_SORT={};
+function vSortArrow(tableId,colIdx){
+  var st=V_SORT[tableId];
+  if(!st||st.col!==colIdx) return ' <span style="font-size:.7em;opacity:.45;">&#8693;</span>';
+  return st.dir===1?' <span style="font-size:.7em;">&#9650;</span>':' <span style="font-size:.7em;">&#9660;</span>';
+}
+function vSortTh(tableId,colIdx,label,style){
+  return '<th onclick="vSortClick(&quot;'+tableId+'&quot;,'+colIdx+')" title="Clic para ordenar (menor a mayor / mayor a menor)" style="cursor:pointer;user-select:none;'+style+'">'+label+vSortArrow(tableId,colIdx)+'</th>';
+}
+function vSortRows(tableId,arr,extractors){
+  var st=V_SORT[tableId];
+  if(!st) return arr;
+  var ext=extractors[st.col];
+  if(!ext) return arr;
+  var copy=arr.slice();
+  copy.sort(function(a,b){
+    var va=ext(a),vb=ext(b),cmp;
+    if(typeof va==="number"&&typeof vb==="number") cmp=va-vb;
+    else cmp=String(va==null?"":va).localeCompare(String(vb==null?"":vb),"es",{numeric:true,sensitivity:"base"});
+    return cmp*st.dir;
+  });
+  return copy;
+}
+function vSortClick(tableId,colIdx){
+  var st=V_SORT[tableId];
+  if(st&&st.col===colIdx){ st.dir=-st.dir; } else { V_SORT[tableId]={col:colIdx,dir:1}; }
+  var r=vRows();
+  if(tableId==="v-table-tipo") vTableTipo();
+  else if(tableId==="v-table-pdv") vTablePdv(r);
+  else if(tableId==="v-rank-pdv") vRankPdv(r);
+  else if(tableId==="v-rank-ref") vRankRef(r);
+  else if(tableId==="v-detail"){ vDetailPage=0; vDetailRender(r); }
+  else if(tableId.indexOf("v-table-prod-")===0) vTableProd(r);
+}
+window.vSortClick=vSortClick;
+
 var vExpandedPdv=null;
 function vTogglePdv(code){
   vExpandedPdv=(vExpandedPdv===code)?null:code;
@@ -6438,13 +6475,16 @@ function vTableTipo(){
   var cont=document.getElementById("v-table-tipo");
   var h='<table style="width:100%;border-collapse:collapse;background:#fff;box-shadow:var(--shadow-sm);border-radius:14px;overflow:hidden;"><thead><tr>';
   ["Tipo de Referencia","Responsable","L\u00edneas","L\u00edneas Incumplidas","% Cumpl. L\u00edneas"].forEach(function(t,i){
-    h+='<th style="background:rgba(122,26,46,0.85);color:#fff;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:10px 14px;text-align:'+(i<=1?"left":"center")+';white-space:nowrap;">'+t+"</th>";
+    h+=vSortTh("v-table-tipo",i,t,'background:rgba(122,26,46,0.85);color:#fff;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:10px 14px;text-align:'+(i<=1?"left":"center")+';white-space:nowrap;');
   });
   h+="</tr></thead><tbody>";
   var vttRowIdx=0;
-  V_TIPOS.forEach(function(t){
-    var ag=vagg(byTipo[t]);
-    if(!ag.n) return; // no mostrar tipos sin l\u00edneas en este tablero
+  var tipoStats=V_TIPOS.map(function(t){return{t:t,ag:vagg(byTipo[t])};}).filter(function(x){return x.ag.n;}); // no mostrar tipos sin l\u00edneas en este tablero
+  tipoStats=vSortRows("v-table-tipo",tipoStats,[
+    function(x){return x.t;},function(x){return V_RESPONSABLE[x.t];},function(x){return x.ag.n;},function(x){return x.ag.incumpl;},function(x){return x.ag.pctLineasOk;}
+  ]);
+  tipoStats.forEach(function(x){
+    var t=x.t, ag=x.ag;
     var bg=vttRowIdx%2==0?"#fff":"#FBF7F3";
     vttRowIdx++;
     var pctColor=ag.pctLineasOk<0.9?"#B91C1C":(ag.pctLineasOk<0.97?"#92400E":"#15803D");
@@ -6486,11 +6526,12 @@ function vRankTable(containerId, rows, groupFn, labelHeader, labelFn){
     if(a.ag.pctLineasOk!==b.ag.pctLineasOk) return a.ag.pctLineasOk-b.ag.pctLineasOk;
     return b.ag.incumpl-a.ag.incumpl;
   });
+  stats=vSortRows(containerId,stats,[function(s){return String(labelFn(s.key)).replace(/<[^>]*>/g,"");},function(s){return s.ag.n;},function(s){return s.ag.pctLineasOk;}]);
   var cont=document.getElementById(containerId);
   if(!stats.length){cont.innerHTML='<div style="padding:1rem;color:var(--text-muted);font-size:.82rem;">Sin datos.</div>';return;}
   var h='<div style="max-height:480px;overflow-y:auto;border-radius:10px;box-shadow:var(--shadow-sm);"><table style="width:100%;border-collapse:collapse;background:#fff;font-size:.78rem;"><thead><tr>';
   [labelHeader,"L\u00edneas","% Cumpl. L\u00edneas"].forEach(function(t,i){
-    h+='<th style="position:sticky;top:0;background:rgba(122,26,46,0.9);color:#fff;font-size:.65rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:8px 12px;text-align:'+(i==0?"left":"center")+';white-space:nowrap;">'+t+"</th>";
+    h+=vSortTh(containerId,i,t,'position:sticky;top:0;background:rgba(122,26,46,0.9);color:#fff;font-size:.65rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:8px 12px;text-align:'+(i==0?"left":"center")+';white-space:nowrap;');
   });
   h+="</tr></thead><tbody>";
   stats.forEach(function(s,i){
@@ -6518,9 +6559,10 @@ function vTablePdv(rows){
   var pdvs=Object.keys(byPdv);
   var stats=pdvs.map(function(p){var ag=vagg(byPdv[p]); return {pdv:p,ag:ag};});
   stats.sort(function(a,b){return a.ag.pctLineasOk-b.ag.pctLineasOk;});
+  stats=vSortRows("v-table-pdv",stats,[function(s){return vPdvLabel(s.pdv);},function(s){return s.ag.n;},function(s){return s.ag.incumpl;},function(s){return s.ag.pctLineasOk;}]);
   var h='<table style="width:100%;border-collapse:collapse;background:#fff;box-shadow:var(--shadow-sm);border-radius:14px;overflow:hidden;"><thead><tr>';
   ["PDV","Líneas","Líneas Incumplidas","% Cumpl. Líneas"].forEach(function(t,i){
-    h+='<th style="background:rgba(122,26,46,0.85);color:#fff;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:10px 14px;text-align:'+(i==0?'left':'center')+';white-space:nowrap;">'+t+'</th>';
+    h+=vSortTh("v-table-pdv",i,t,'background:rgba(122,26,46,0.85);color:#fff;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:10px 14px;text-align:'+(i==0?'left':'center')+';white-space:nowrap;');
   });
   h+='</tr></thead><tbody>';
   stats.forEach(function(s,i){
@@ -6560,6 +6602,7 @@ function vTableProd(rows){
   var h='<div class="v-prod-grid">';
   V_TIPOS.filter(function(t){return t!=="Producto Terminado";}).forEach(function(t){
     var arr=vProdStats(rows,t).slice(0,10);
+    arr=vSortRows("v-table-prod-"+t,arr,[function(x){return x.ref;},function(x){return x.desc;},function(x){return x.lineas;}]);
     h+='<div class="v-prod-card"><div class="v-prod-card-head"><span class="v-prod-card-title">'+t+'</span>'
       +(arr.length?'<span class="v-prod-card-count">'+arr.length+(arr.length===1?' ref.':' refs.')+'</span>':'')
       +'</div>';
@@ -6568,7 +6611,7 @@ function vTableProd(rows){
     } else {
       h+='<div style="max-height:320px;overflow-y:auto;border-radius:10px;"><table style="width:100%;border-collapse:collapse;background:#fff;font-size:.76rem;"><thead><tr>';
       ["Referencia","Descripción","Líneas Incump."].forEach(function(th,i){
-        h+='<th style="position:sticky;top:0;background:rgba(122,26,46,0.9);color:#fff;font-size:.62rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:7px 9px;text-align:'+(i<2?"left":"center")+';white-space:nowrap;">'+th+"</th>";
+        h+=vSortTh("v-table-prod-"+t,i,th,'position:sticky;top:0;background:rgba(122,26,46,0.9);color:#fff;font-size:.62rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:7px 9px;text-align:'+(i<2?"left":"center")+';white-space:nowrap;');
       });
       h+="</tr></thead><tbody>";
       arr.forEach(function(s,i){
@@ -6663,10 +6706,16 @@ function vDetailHeader(){
   var cols=["Picking","Pedido","PDV","doctoERP","EAN","Referencia","Descripción","Cant. Pedida","Qty Comprometida","Cant. Picking","Pendientes","Fecha Picking","Fecha Pedido","Observación"];
   var h='<tr>';
   cols.forEach(function(t,i){
-    h+='<th style="background:rgba(122,26,46,0.85);color:#fff;font-size:.65rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:8px 10px;text-align:'+(i>=7&&i<=10?'right':'left')+';white-space:nowrap;">'+t+'</th>';
+    h+=vSortTh("v-detail",i,t,'background:rgba(122,26,46,0.85);color:#fff;font-size:.65rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:8px 10px;text-align:'+(i>=7&&i<=10?'right':'left')+';white-space:nowrap;');
   });
   return h+'</tr>';
 }
+var V_DETAIL_EXTRACTORS=[
+  function(d){return d[10]==null?"":d[10];},function(d){return d[11]==null?"":d[11];},function(d){return vPdvLabel(d[0]);},
+  function(d){return d[15]||"";},function(d){return d[14]==null?"":d[14];},function(d){return d[4]||"";},function(d){return d[5]||"";},
+  function(d){return Number(d[6])||0;},function(d){return Number(d[9])||0;},function(d){return Number(d[7])||0;},function(d){return Number(d[8])||0;},
+  function(d){return d[12]||"";},function(d){return d[3]||"";},function(d){return d[13]||"";}
+];
 function vDetailRow(d,bg){
   var cellsL=[d[10],d[11],vPdvLabel(d[0]),d[15],d[14],d[4]];
   var desc=d[5];
@@ -6687,6 +6736,7 @@ function vDetailRow(d,bg){
   return h+'</tr>';
 }
 function vDetailRender(rows){
+  rows=vSortRows("v-detail",rows,V_DETAIL_EXTRACTORS);
   var totalPages=Math.max(1,Math.ceil(rows.length/vDetailPageSize));
   if(vDetailPage>=totalPages) vDetailPage=totalPages-1;
   if(vDetailPage<0) vDetailPage=0;
