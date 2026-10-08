@@ -2407,8 +2407,11 @@ function vtReapplyVisibility(tbody) {
   if (toggleRow) {
     const link = toggleRow.querySelector('a');
     const hiddenCount = rows.length - limit;
-    link.textContent = collapsed ? `Ver más (${hiddenCount} filas más) ▼` : 'Ver menos ▲';
-    tbody.insertBefore(toggleRow, tbody.firstChild);
+    const abajo = tbody.getAttribute('data-vt-boton') === 'abajo';
+    link.textContent = collapsed ? (abajo ? `Ver todos (${hiddenCount} filas más) ▼` : `Ver más (${hiddenCount} filas más) ▼`) : 'Ver menos ▲';
+    // data-vt-boton="abajo": cerrado, el botón va justo debajo de las primeras filas; abierto, arriba para cerrar sin bajar al final.
+    if (abajo && collapsed && rows[limit - 1]) tbody.insertBefore(toggleRow, rows[limit - 1].nextSibling);
+    else tbody.insertBefore(toggleRow, tbody.firstChild);
   }
 }
 function vtApplyCollapse(tbodyId, limit) {
@@ -3531,7 +3534,8 @@ function renderPreciosTab() {
       </tr>`;
     }).join('');
   }
-  vtApplyCollapse('precios-tbody', 5);
+  document.getElementById('precios-tbody').setAttribute('data-vt-boton', 'abajo');
+  vtApplyCollapse('precios-tbody', 10); // primeras 10 filas + botón "Ver todos" debajo
 
   renderSobrecostoAhorroChart(rows.length ? rows : PRICE_DATA.priceVariation);
 
@@ -6491,6 +6495,8 @@ function vSortClick(tableId,colIdx){
 }
 window.vSortClick=vSortClick;
 
+var vPdvVerTodos=false;
+window.vPdvToggleTodos=function(){ vPdvVerTodos=!vPdvVerTodos; vTablePdv(vRows()); };
 var vExpandedPdv=null;
 function vTogglePdv(code){
   vExpandedPdv=(vExpandedPdv===code)?null:code;
@@ -6626,11 +6632,16 @@ function vTablePdv(rows){
   var stats=pdvs.map(function(p){var ag=vagg(byPdv[p]); return {pdv:p,ag:ag};});
   stats.sort(function(a,b){return a.ag.pctLineasOk-b.ag.pctLineasOk;});
   stats=vSortRows("v-table-pdv",stats,[function(s){return vPdvLabel(s.pdv);},function(s){return s.ag.n;},function(s){return s.ag.incumpl;},function(s){return s.ag.pctLineasOk;}]);
+  // Primeras 10 filas y botón "Ver todos" debajo; abierta, "Ver menos" arriba
+  var vPdvTotal=stats.length, vPdvLimite=10;
+  if(!vPdvVerTodos&&vPdvTotal>vPdvLimite) stats=stats.slice(0,vPdvLimite);
   var h='<table style="width:100%;border-collapse:collapse;background:#fff;box-shadow:var(--shadow-sm);border-radius:14px;overflow:hidden;"><thead><tr>';
   ["PDV","Líneas","Líneas Incumplidas","% Cumpl. Líneas"].forEach(function(t,i){
     h+=vSortTh("v-table-pdv",i,t,'background:rgba(122,26,46,0.85);color:#fff;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:10px 14px;text-align:'+(i==0?'left':'center')+';white-space:nowrap;');
   });
   h+='</tr></thead><tbody>';
+  var vPdvBoton=function(txt){return '<tr><td colspan="4" style="padding:.45rem .75rem;background:var(--wine-pale);"><a href="javascript:void(0)" onclick="vPdvToggleTodos()" style="font-size:.75rem;font-weight:700;color:var(--wine-dark);text-decoration:none;">'+txt+'</a></td></tr>';};
+  if(vPdvVerTodos&&vPdvTotal>vPdvLimite) h+=vPdvBoton('Ver menos &#9650;');
   stats.forEach(function(s,i){
     var bg = i%2==0?'#fff':'#FBF7F3';
     var pctColor = s.ag.pctLineasOk<0.9? '#B91C1C' : (s.ag.pctLineasOk<0.97?'#92400E':'#15803D');
@@ -6645,6 +6656,7 @@ function vTablePdv(rows){
       h+='<tr><td colspan="4" style="padding:0;border-bottom:2px solid var(--wine-pale);">'+vPdvDetailPanel(byPdv[s.pdv])+'</td></tr>';
     }
   });
+  if(!vPdvVerTodos&&vPdvTotal>vPdvLimite) h+=vPdvBoton('Ver todos ('+(vPdvTotal-vPdvLimite)+' PDV m&aacute;s) &#9660;');
   h+='</tbody></table>';
   document.getElementById("v-table-pdv").innerHTML=h;
 }
