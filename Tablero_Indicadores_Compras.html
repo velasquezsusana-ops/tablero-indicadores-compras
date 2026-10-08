@@ -617,14 +617,42 @@ footer strong { color: rgba(255,255,255,0.8); }
       <div class="chart-wrap" style="height:280px"><canvas id="ch-top-items-resumen"></canvas></div>
     </div>
     <div class="chart-card">
-      <div class="card-title">19. Gasto de Compras por Centro / Bodega</div>
-      <div class="card-sub">Top 10 destinos del presupuesto de compras</div>
-      <div class="chart-wrap" style="height:280px"><canvas id="ch-top-bodegas-resumen"></canvas></div>
+      <div class="card-title">19. Gasto de Compras por Centro / Bodega (<span id="bodegas-res-count">–</span>)</div>
+      <div class="card-sub" id="bodegas-res-sub">Todos los puntos de venta y bodegas, de mayor a menor gasto</div>
+      <div style="overflow:auto; max-height:300px">
+        <style>#bodegas-res-table th,#bodegas-res-table td{padding:.4rem .45rem;font-size:.76rem}#bodegas-res-table td:first-child,#bodegas-res-table th:first-child{width:1.6rem;color:var(--text-light)}#bodegas-res-table td:nth-child(n+3){white-space:nowrap}</style>
+        <table class="data-table" id="bodegas-res-table">
+          <thead><tr>
+            <th style="position:sticky; top:0; background:#fff; z-index:1">#</th>
+            <th style="position:sticky; top:0; background:#fff; z-index:1">Punto de venta / Bodega</th>
+            <th style="position:sticky; top:0; background:#fff; z-index:1">Gasto</th>
+            <th style="position:sticky; top:0; background:#fff; z-index:1">%</th>
+          </tr></thead>
+          <tbody id="bodegas-res-tbody"></tbody>
+          <tfoot id="bodegas-res-tfoot"></tfoot>
+        </table>
+      </div>
     </div>
     <div class="chart-card">
       <div class="card-title">20. Gasto de Compras por Tipo de Producto</div>
       <div class="card-sub">Distribución del presupuesto por categoría de producto</div>
       <div class="chart-wrap" style="height:280px"><canvas id="ch-top-tipo-resumen"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-grid-1">
+    <div class="chart-card">
+      <div class="card-title">21. Compras Mensuales por Tipo de Producto</div>
+      <div class="card-sub" id="sub-tipo-mensual">Valor neto comprado por mes, por tipo de producto (COP Millones)</div>
+      <div class="chart-wrap" style="height:320px"><canvas id="ch-tipo-mensual"></canvas></div>
+      <div style="overflow-x:auto; margin-top:0.9rem">
+        <style>#tipo-mensual-table td,#tipo-mensual-table th{white-space:nowrap}</style>
+        <table class="data-table" id="tipo-mensual-table">
+          <thead id="tipo-mensual-thead"></thead>
+          <tbody id="tipo-mensual-tbody"></tbody>
+          <tfoot id="tipo-mensual-tfoot"></tfoot>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -2323,19 +2351,20 @@ function getBodegaSpendList() {
   return list.sort((a,b_) => b_[1]-a[1]);
 }
 
-// 19. Top 10 bodegas (versión resumen)
+// 19. Gasto de compras por centro / bodega (versión resumen) — tabla con TODAS las bodegas y
+// puntos de venta, por nombre (antes era gráfico Top 10 con el código PVxxx, poco legible).
 function renderTopBodegasResumen() {
-  destroyChart('ch-top-bodegas-resumen');
-  const bd = getBodegaSpendList();
-  charts['ch-top-bodegas-resumen'] = new Chart(document.getElementById('ch-top-bodegas-resumen'), {
-    type: 'bar',
-    data: { labels: bd.map(x => x[0]),
-      datasets: [{ label: 'Gasto (M COP)', data: bd.map(x => x[1]),
-        backgroundColor: bd.map((x,i) => x[0]==='LOCAL' ? COLORS.wine : PALETTE[i % PALETTE.length]), borderRadius: 4 }] },
-    options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: false },
-      tooltip: { ...TOOLTIP_BASE, callbacks: { label: c => fmt(c.raw) } } },
-      scales: { ...baseOpts.scales, y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => '$'+v+'M' } } } }
-  });
+  const rows = getAllBodegaRows();
+  const total = rows.reduce((a,x) => a + x[1], 0);
+  document.getElementById('bodegas-res-count').textContent = rows.length;
+  const sub = document.getElementById('bodegas-res-sub');
+  if (sub) sub.textContent = 'Todos los puntos de venta y bodegas, de mayor a menor gasto · ' + distribPeriodoLbl();
+  document.getElementById('bodegas-res-tbody').innerHTML = rows.length ? rows.map((x,i) => `<tr>
+      <td class="num">${i+1}</td><td>${bodegaNombre(x[0])}</td>
+      <td class="num">${fmt(x[1])}</td><td class="num">${total ? (x[1]/total*100).toFixed(1) : '0.0'}%</td></tr>`).join('')
+    : '<tr><td colspan="4" style="text-align:center;color:var(--text-light);padding:1.5rem">Sin compras para el filtro seleccionado.</td></tr>';
+  document.getElementById('bodegas-res-tfoot').innerHTML = rows.length ? `<tr style="font-weight:700;background:var(--wine-ghost)">
+      <td></td><td>TOTAL</td><td class="num">${fmt(total)}</td><td class="num">100%</td></tr>` : '';
 }
 
 // Gasto por Tipo de Producto (agrupa FILTER.topItems via ITEM_TIPO); respeta
@@ -2382,6 +2411,77 @@ function renderTopTipoResumen() {
     options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: false },
       tooltip: { ...TOOLTIP_BASE, callbacks: { label: c => fmt(c.raw) } } },
       scales: { ...baseOpts.scales, y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => '$'+v+'M' } } } }
+  });
+}
+
+
+// 21. Compras mensuales por tipo de producto (barras apiladas por mes).
+// - Sin filtro de ítem: una serie por Tipo de producto (los tipos escogidos en el filtro Tipo, o todos).
+// - Con ítems escogidos a mano (hasta 10): una serie por ítem, para ver las compras mensuales de ese producto.
+// Respeta Año/Mes (meses del eje), Bodega (BODEGA_MASTER.hist.itemMonthly) y Proveedor (PROV_ITEM_CROSS).
+function tipoMensualItemSeries(name) {
+  const out = Array(months.length).fill(0);
+  const add = arr => { if (arr) arr.forEach((v,i) => { out[i] += v || 0; }); };
+  if (filterBodegas.length) filterBodegas.forEach(b => add(BODEGA_MASTER.hist.itemMonthly[b] && BODEGA_MASTER.hist.itemMonthly[b][name]));
+  else if (filterProvs.length) filterProvs.forEach(p => add(PROV_ITEM_CROSS.itemsByProv[p] && PROV_ITEM_CROSS.itemsByProv[p][name]));
+  else { const it = FILTER.topItems.find(x => x.name === name); add(it && it.monthly); }
+  return out;
+}
+// Tabla con los mismos datos del gráfico 21: una fila por mes (más reciente primero),
+// una columna por serie (tipo o ítem) + Total. Muestra 10 meses y el resto con "Ver más".
+function renderTipoMensualTabla(series, idxs) {
+  const thead = document.getElementById('tipo-mensual-thead');
+  const tbody = document.getElementById('tipo-mensual-tbody');
+  const tfoot = document.getElementById('tipo-mensual-tfoot');
+  if (!thead || !tbody) return;
+  const th = 'style="position:sticky; top:0; background:#fff; z-index:1"';
+  thead.innerHTML = '<tr><th ' + th + '>Mes</th>' + series.map(x => `<th ${th} title="${x.k}">${x.k.length > 26 ? x.k.slice(0,24)+'…' : x.k}</th>`).join('') + `<th ${th}>Total</th></tr>`;
+  if (!series.length) {
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;color:var(--text-light);padding:1.5rem">Sin compras para el filtro seleccionado.</td></tr>';
+    tfoot.innerHTML = ''; return;
+  }
+  const filas = idxs.map((mi, n) => ({ lbl: monthsLbl[mi], vals: series.map(x => x.data[n]) })).reverse();
+  tbody.innerHTML = filas.map(f => `<tr><td>${f.lbl}</td>${f.vals.map(v => `<td class="num">${v ? fmt(v) : '–'}</td>`).join('')}<td class="num" style="font-weight:700">${fmt(f.vals.reduce((a,v) => a+v, 0))}</td></tr>`).join('');
+  vtApplyCollapse('tipo-mensual-tbody', 10);
+  const tot = series.map(x => x.data.reduce((a,v) => a+v, 0));
+  tfoot.innerHTML = `<tr style="font-weight:700;background:var(--wine-ghost)"><td>TOTAL</td>${tot.map(v => `<td class="num">${fmt(v)}</td>`).join('')}<td class="num">${fmt(tot.reduce((a,v) => a+v, 0))}</td></tr>`;
+}
+function renderTipoMensual() {
+  destroyChart('ch-tipo-mensual');
+  const canvas = document.getElementById('ch-tipo-mensual');
+  if (!canvas) return;
+  const idxs = activeMonthIdxs();
+  const porItem = filterItems.length > 0 && !filterTipos.length && filterItems.length <= 10;
+  const items = FILTER.topItems.filter(it => !filterItems.length || filterItems.includes(it.name));
+  const grupos = {};
+  items.forEach(it => {
+    const key = porItem ? it.name : (ITEM_TIPO[it.name] || 'Otros');
+    if (filterTipos.length && !porItem && !filterTipos.includes(key)) return;
+    const serie = tipoMensualItemSeries(it.name);
+    if (!grupos[key]) grupos[key] = Array(months.length).fill(0);
+    serie.forEach((v,i) => { grupos[key][i] += v; });
+  });
+  const orden = porItem ? Object.keys(grupos) : TIPO_NAMES.filter(t => grupos[t]);
+  const series = orden.map(k => ({ k, data: idxs.map(i => Math.round(grupos[k][i]*10)/10) }))
+    .filter(x => x.data.some(v => v)).sort((a,b) => b.data.reduce((s,v)=>s+v,0) - a.data.reduce((s,v)=>s+v,0));
+  const sub = document.getElementById('sub-tipo-mensual');
+  if (sub) sub.textContent = (porItem ? 'Compras mensuales de: ' + itemLabel()
+      : filterTipos.length ? 'Compras mensuales del tipo: ' + filterTipos.join(', ')
+      : 'Valor neto comprado por mes, por tipo de producto') + ' (COP Millones)'
+    + (filterBodegas.length ? ' · Bodega: ' + bodegaLabel() : filterProvs.length ? ' · Proveedor: ' + provLabel() : '')
+    + (filterItems.length > 10 && !filterTipos.length ? ' · más de 10 ítems escogidos: se agrupan por tipo' : '');
+  renderTipoMensualTabla(series, idxs);
+  charts['ch-tipo-mensual'] = new Chart(canvas, {
+    type: 'bar',
+    data: { labels: idxs.map(i => monthsLbl[i]),
+      datasets: series.map((x,n) => ({ label: x.k.length > 34 ? x.k.slice(0,32)+'…' : x.k, data: x.data,
+        backgroundColor: PALETTE[n % PALETTE.length], borderRadius: 2, stack: 's' })) },
+    options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+      tooltip: { ...TOOLTIP_BASE, mode: 'index', intersect: false, filter: c => c.raw,
+        callbacks: { label: c => c.dataset.label + ': ' + fmt(c.raw),
+          footer: cs => 'Total: ' + fmt(cs.reduce((a,c) => a + (c.raw||0), 0)) } } },
+      scales: { ...baseOpts.scales, x: { ...baseOpts.scales.x, stacked: true },
+        y: { ...baseOpts.scales.y, stacked: true, ticks: { ...baseOpts.scales.y.ticks, callback: v => '$'+v+'M' } } } }
   });
 }
 
@@ -2623,7 +2723,7 @@ function renderVentasCompras() {
 
 function renderResumenTab() {
   renderKPIs(); renderInsights();
-  renderMensual(); renderTopProvResumen(); renderTopItemsResumen(); renderTopBodegasResumen(); renderTopTipoResumen();
+  renderMensual(); renderTopProvResumen(); renderTopItemsResumen(); renderTopBodegasResumen(); renderTopTipoResumen(); renderTipoMensual();
   renderVentasCompras();
   renderLeadTimeResumen(); renderComparativoAnualTabla();
 }
@@ -3398,7 +3498,12 @@ function sumMonthlyArr(arr, idxs) {
 // Compras por bodega — TODAS las bodegas, respeta los filtros de proveedor/ítem/bodega/período.
 // El filtro de proveedor usa el cruce ya existente en BODEGA_MASTER.hist.provMonthly (Top proveedores);
 // el filtro de ítem usa BODEGA_ITEM_DETAIL.bodegaItemDetail (cubre TODOS los ítems, no solo el Top).
-function renderBodegasTable() {
+// Nombre del punto de venta / bodega (PV119 -> "PDV VIVA ENVIGADO"); si no hay nombre, el código.
+function bodegaNombre(b) { return (BODEGA_MASTER.bodegaNames && BODEGA_MASTER.bodegaNames[b]) || b; }
+
+// Filas [bodega, gasto M COP, facturas] de TODAS las bodegas con gasto > 0, mayor a menor,
+// respetando proveedor/ítem/tipo/bodega/período. Usada por Distribución y por la tabla 19 del Resumen.
+function getAllBodegaRows() {
   const idxs = dateIdxs();
   let rows;
   if (filterProvs.length) {
@@ -3424,12 +3529,15 @@ function renderBodegasTable() {
     ]);
   }
   if (filterBodegas.length) rows = rows.filter(x => filterBodegas.includes(x[0]));
-  rows = rows.filter(x => x[1] > 0).sort((a,b) => b[1]-a[1]);
+  return rows.filter(x => x[1] > 0).sort((a,b) => b[1]-a[1]);
+}
 
+function renderBodegasTable() {
+  const rows = getAllBodegaRows();
   const total = rows.reduce((s,x) => s+x[1], 0);
   const tbody = document.getElementById('bodegas-tbody');
   tbody.innerHTML = rows.map((x,i) => `
-    <tr><td class="num">${i+1}</td><td>${x[0]}</td><td class="num">${fmt(x[1])}</td><td class="num">${total ? (x[1]/total*100).toFixed(1) : '0.0'}%</td></tr>`).join('');
+    <tr><td class="num">${i+1}</td><td>${bodegaNombre(x[0])}</td><td class="num">${fmt(x[1])}</td><td class="num">${total ? (x[1]/total*100).toFixed(1) : '0.0'}%</td></tr>`).join('');
   document.getElementById('bodegas-count').textContent = rows.length;
   const sub = document.getElementById('bodegas-sub');
   if (sub) sub.textContent = `Ranking con valor neto y participación · ${distribPeriodoLbl()}` + (filterProvs.length ? ' · el gasto por proveedor solo cubre el Top de proveedores del tablero' : '');
@@ -3448,7 +3556,7 @@ function renderBodegaItemTable() {
 
   const tbody = document.getElementById('bodega-item-tbody');
   tbody.innerHTML = combos.map(([b, it, gasto, fact]) => `
-    <tr><td>${b}</td><td>${it.length > 44 ? it.slice(0,42)+'…' : it}</td>
+    <tr><td>${bodegaNombre(b)}</td><td>${it.length > 44 ? it.slice(0,42)+'…' : it}</td>
       <td class="num">${fmt(gasto)}</td><td class="num">${fact.toLocaleString('es-CO')}</td></tr>`).join('');
   vtApplyCollapse('bodega-item-tbody', 5);
   document.getElementById('bodega-item-count').textContent = combos.length.toLocaleString('es-CO');
@@ -3639,7 +3747,7 @@ function syncDualScrollbar(table) {
 // ══════════════════════════════════════════════════════════════════════════
 // TAB NEGOCIACIONES — carga dinámica de Excel (SheetJS), sin recargar la app
 // ══════════════════════════════════════════════════════════════════════════
-let NEG_DATA = {"kpis":{"meses":[{"mes":"Julio","monto":789677.4193548387,"pct":0.05494209534069486},{"mes":"Agosto","monto":3395483.870967742,"pct":0.02762381642207806},{"mes":"Septiembre","monto":18607850.666666664,"pct":0.06714179150612956}],"ahorroMensualTotal":34507760.0,"proyeccionAnual":414093120.0,"pctAhorroSobreCompraBase":0.09077991347594414},"productos":[{"producto":"Comino molido","precioActual":34000.0,"precioNuevo":22941.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PRUEBA"},{"producto":"Pimienta negra","precioActual":46000.0,"precioNuevo":37222.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE"},{"producto":"Cebolla en polvo","precioActual":18000.0,"precioNuevo":13000.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE"},{"producto":"Snow Flake G2141","precioActual":17400.0,"precioNuevo":13800.0,"ahorroMensual":720000.0,"reduccionPct":0.20689655172413793,"ahorroAnual":8640000.0,"estado":"EJECUTANDO"},{"producto":"Carne molida cañón","precioActual":13500.0,"precioNuevo":12500.0,"ahorroMensual":1120000.0,"reduccionPct":0.07407407407407407,"ahorroAnual":13440000.0,"estado":"EJECUTANDO"},{"producto":"Recorte de pechuga","precioActual":13000.0,"precioNuevo":12300.0,"ahorroMensual":1680000.0,"reduccionPct":0.05384615384615385,"ahorroAnual":20160000.0,"estado":"EJECUTANDO"},{"producto":"Tilapia","precioActual":10500.0,"precioNuevo":9800.0,"ahorroMensual":700000.0,"reduccionPct":0.06666666666666667,"ahorroAnual":8400000.0,"estado":"EJECUTANDO"},{"producto":"Camarón 71/90 30% glaceo","precioActual":23500.0,"precioNuevo":19800.0,"ahorroMensual":7400000.0,"reduccionPct":0.1574468085106383,"ahorroAnual":88800000.0,"estado":"EJECUTANDO"},{"producto":"Vinipel","precioActual":7300.0,"precioNuevo":6500.0,"ahorroMensual":480000.0,"reduccionPct":0.1095890410958904,"ahorroAnual":5760000.0,"estado":"EJECUTANDO"},{"producto":"Solomo redondo (actuales +1 nuevo)","precioActual":46250.0,"precioNuevo":45800.0,"ahorroMensual":1350000.0,"reduccionPct":0.00972972972972973,"ahorroAnual":16200000.0,"estado":"EJECUTANDO"},{"producto":"Aceite mezcla soya+palma","precioActual":8500.0,"precioNuevo":8000.0,"ahorroMensual":1500000.0,"reduccionPct":0.058823529411764705,"ahorroAnual":18000000.0,"estado":"EJECUTANDO"},{"producto":"Filete de Bassa","precioActual":12000.0,"precioNuevo":10500.0,"ahorroMensual":1500000.0,"reduccionPct":0.125,"ahorroAnual":18000000.0,"estado":"EJECUTANDO"},{"producto":"Pasta de tomate Bary","precioActual":18000.0,"precioNuevo":15528.0,"ahorroMensual":197760.0,"reduccionPct":0.13733333333333334,"ahorroAnual":2373120.0,"estado":"EJECUTANDO"},{"producto":"Mostaza","precioActual":43400.0,"precioNuevo":39060.0,"ahorroMensual":434000.0,"reduccionPct":0.1,"ahorroAnual":5208000.0,"estado":"EJECUTANDO"},{"producto":"Solomo con cascara","precioActual":46250.0,"precioNuevo":29900.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE"},{"producto":"Filete de pollo","precioActual":24500.0,"precioNuevo":23500.0,"ahorroMensual":390000.0,"reduccionPct":0.04081632653061224,"ahorroAnual":4680000.0,"estado":"EJECUTANDO"},{"producto":"Sello de seguridad","precioActual":110.0,"precioNuevo":100.0,"ahorroMensual":200000.0,"reduccionPct":0.09090909090909091,"ahorroAnual":2400000.0,"estado":"EJECUTANDO"},{"producto":"Rollo termico caja","precioActual":13458.0,"precioNuevo":11138.0,"ahorroMensual":580000.0,"reduccionPct":0.1723881706048447,"ahorroAnual":6960000.0,"estado":"EJECUTANDO"},{"producto":"Garbanzo X KG","precioActual":9340.0,"precioNuevo":6532.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE"},{"producto":"Salmon 2-3","precioActual":39000.0,"precioNuevo":37000.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE"},{"producto":"Queso mozarella tajado 800grs","precioActual":35000.0,"precioNuevo":27000.0,"ahorroMensual":16000000.0,"reduccionPct":0.22857142857142856,"ahorroAnual":192000000.0,"estado":"EJECUTANDO"},{"producto":"Mejillon chorito","precioActual":6480.0,"precioNuevo":5200.0,"ahorroMensual":256000.0,"reduccionPct":0.19753086419753085,"ahorroAnual":3072000.0,"estado":"EJECUTANDO"}],"sourceLabel":"AHORROS A SEPT.xlsx"};
+let NEG_DATA = {"kpis":{"meses":[{"mes":"Julio","monto":789677.4193548387,"pct":0.05494209534069486},{"mes":"Agosto","monto":3395483.870967742,"pct":0.02762381642207806},{"mes":"Septiembre","monto":18607850.666666664,"pct":0.06714179150612956}],"ahorroMensualTotal":34507760.0,"proyeccionAnual":414093120.0,"pctAhorroSobreCompraBase":0.09077991347594414},"productos":[{"producto":"Comino molido","precioActual":34000.0,"precioNuevo":22941.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PRUEBA","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Pimienta negra","precioActual":46000.0,"precioNuevo":37222.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Cebolla en polvo","precioActual":18000.0,"precioNuevo":13000.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Snow Flake G2141","precioActual":17400.0,"precioNuevo":13800.0,"ahorroMensual":720000.0,"reduccionPct":0.20689655172413793,"ahorroAnual":8640000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":696000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":3364000}},{"producto":"Carne molida cañón","precioActual":13500.0,"precioNuevo":12500.0,"ahorroMensual":1120000.0,"reduccionPct":0.07407407407407407,"ahorroAnual":13440000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":1082666.6666666667},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":14616000}},{"producto":"Recorte de pechuga","precioActual":13000.0,"precioNuevo":12300.0,"ahorroMensual":1680000.0,"reduccionPct":0.05384615384615385,"ahorroAnual":20160000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":758709.6774193548,"AGOSTO":1680000,"SEPTIEMBRE":1680000},"baseMes":{"JULIO":14090322.58064516,"AGOSTO":31200000,"SEPTIEMBRE":31200000}},{"producto":"Tilapia","precioActual":10500.0,"precioNuevo":9800.0,"ahorroMensual":700000.0,"reduccionPct":0.06666666666666667,"ahorroAnual":8400000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":451612.9032258064,"SEPTIEMBRE":700000},"baseMes":{"JULIO":0,"AGOSTO":6774193.548387096,"SEPTIEMBRE":10500000}},{"producto":"Camarón 71/90 30% glaceo","precioActual":23500.0,"precioNuevo":19800.0,"ahorroMensual":7400000.0,"reduccionPct":0.1574468085106383,"ahorroAnual":88800000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":4933333.333333333},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":31333333.333333332}},{"producto":"Vinipel","precioActual":7300.0,"precioNuevo":6500.0,"ahorroMensual":480000.0,"reduccionPct":0.1095890410958904,"ahorroAnual":5760000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":30967.74193548387,"AGOSTO":480000,"SEPTIEMBRE":480000},"baseMes":{"JULIO":282580.6451612903,"AGOSTO":4380000,"SEPTIEMBRE":4380000}},{"producto":"Solomo redondo (actuales +1 nuevo)","precioActual":46250.0,"precioNuevo":45800.0,"ahorroMensual":1350000.0,"reduccionPct":0.00972972972972973,"ahorroAnual":16200000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":783870.9677419355,"SEPTIEMBRE":1350000},"baseMes":{"JULIO":0,"AGOSTO":80564516.12903227,"SEPTIEMBRE":138750000}},{"producto":"Aceite mezcla soya+palma","precioActual":8500.0,"precioNuevo":8000.0,"ahorroMensual":1500000.0,"reduccionPct":0.058823529411764705,"ahorroAnual":18000000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":150000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":2550000}},{"producto":"Filete de Bassa","precioActual":12000.0,"precioNuevo":10500.0,"ahorroMensual":1500000.0,"reduccionPct":0.125,"ahorroAnual":18000000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":150000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":1200000}},{"producto":"Pasta de tomate Bary","precioActual":18000.0,"precioNuevo":15528.0,"ahorroMensual":197760.0,"reduccionPct":0.13733333333333334,"ahorroAnual":2373120.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":177984},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":1296000}},{"producto":"Mostaza","precioActual":43400.0,"precioNuevo":39060.0,"ahorroMensual":434000.0,"reduccionPct":0.1,"ahorroAnual":5208000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":231466.66666666666},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":2314666.6666666665}},{"producto":"Solomo con cascara","precioActual":46250.0,"precioNuevo":29900.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Filete de pollo","precioActual":24500.0,"precioNuevo":23500.0,"ahorroMensual":390000.0,"reduccionPct":0.04081632653061224,"ahorroAnual":4680000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":182000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":4459000}},{"producto":"Sello de seguridad","precioActual":110.0,"precioNuevo":100.0,"ahorroMensual":200000.0,"reduccionPct":0.09090909090909091,"ahorroAnual":2400000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":180000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":1980000}},{"producto":"Rollo termico caja","precioActual":13458.0,"precioNuevo":11138.0,"ahorroMensual":580000.0,"reduccionPct":0.1723881706048447,"ahorroAnual":6960000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":154666.66666666666},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":897200}},{"producto":"Garbanzo X KG","precioActual":9340.0,"precioNuevo":6532.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Salmon 2-3","precioActual":39000.0,"precioNuevo":37000.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Queso mozarella tajado 800grs","precioActual":35000.0,"precioNuevo":27000.0,"ahorroMensual":16000000.0,"reduccionPct":0.22857142857142856,"ahorroAnual":192000000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":6400000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":28000000}},{"producto":"Mejillon chorito","precioActual":6480.0,"precioNuevo":5200.0,"ahorroMensual":256000.0,"reduccionPct":0.19753086419753085,"ahorroAnual":3072000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":59733.333333333336},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":302400}}],"sourceLabel":"AHORROS A SEPT.xlsx"};
 
 const NEG_ESTADO_CLS = {
   'EJECUTADO': 'estado-ejecutado', 'EJECUTANDO': 'estado-ejecutando',
@@ -3699,7 +3807,54 @@ function parseNegWorkbook(wb) {
   kpis.ahorroMensualTotal = ahorroMensualTotal;
   kpis.proyeccionAnual = totalRow ? safeNum(totalRow[5]) : (ahorroMensualTotal || 0) * 12;
   kpis.pctAhorroSobreCompraBase = totalRow ? safeNum(totalRow[4]) : null;
+  negAttachImpactoMes(wb, productos, negNormMes, MESES_ES);
   return { kpis, productos };
+}
+
+// Hoja 'DETALLE': columnas "Impacto <mes> $" y "Base <mes> $" por producto. Son las que suman
+// las tarjetas mensuales del RESUMEN (Σ impacto del mes = monto; Σ impacto / Σ base = Ahorro %).
+// Se guardan en cada producto como impactoMes / baseMes = { 'SEPTIEMBRE': valor, ... } para que
+// el filtro global de Mes pueda mostrar en el detalle solo lo de los meses escogidos.
+function negAttachImpactoMes(wb, productos, negNormMes, MESES_ES) {
+  const ws = wb.Sheets['DETALLE'];
+  if (!ws) return;
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+  const head = rows[0] || [];
+  const cols = [];
+  head.forEach((h, c) => {
+    const m = negNormMes(h).match(/^(IMPACTO|BASE)\s+([A-Z]+)/);
+    if (m && MESES_ES.includes(m[2])) cols.push({ c, tipo: m[1] === 'IMPACTO' ? 'impactoMes' : 'baseMes', mes: m[2] });
+  });
+  if (!cols.length) return;
+  const porNombre = {};
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i] || [];
+    if (r[0] === null || r[0] === undefined || r[0] === '') continue;
+    const o = { impactoMes: {}, baseMes: {} };
+    cols.forEach(k => { o[k.tipo][k.mes] = safeNum(r[k.c]) || 0; });
+    porNombre[negNormMes(r[0])] = o;
+  }
+  productos.forEach(p => {
+    const o = porNombre[negNormMes(p.producto)];
+    if (o) { p.impactoMes = o.impactoMes; p.baseMes = o.baseMes; }
+  });
+}
+
+// Meses (en mayúsculas, sin tilde) escogidos en el filtro global "Mes". El Excel de Ahorros no
+// trae año, así que se compara solo por el número de mes. [] = sin filtro de mes.
+// Datos guardados antes de existir el filtro por mes no traen impactoMes: se completan con los
+// del archivo embebido (mismo producto), para no obligar a volver a subir el Excel.
+function negKeepImpactoMes(nuevo, previo) {
+  if (!nuevo || !nuevo.productos || nuevo.productos.some(p => p.impactoMes) || !previo || !previo.productos) return nuevo;
+  const k = s => String(s || '').trim().toUpperCase();
+  const map = {}; previo.productos.forEach(p => { if (p.impactoMes) map[k(p.producto)] = p; });
+  nuevo.productos.forEach(p => { const o = map[k(p.producto)]; if (o) { p.impactoMes = o.impactoMes; p.baseMes = o.baseMes; } });
+  return nuevo;
+}
+
+function negMesesFiltro() {
+  const NOM = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  return [...new Set((filterMeses || []).map(m => NOM[(+String(m).split('-')[1]) - 1]).filter(Boolean))];
 }
 
 function handleNegFileUpload(ev) {
@@ -3811,6 +3966,26 @@ function renderNegociacionesTab() {
   if (fProd) rows = rows.filter(p => p.producto === fProd);
   if (fEst) rows = rows.filter(p => p.estado === fEst);
 
+  // Filtro global de Mes: si hay meses escogidos (y el Excel trae la hoja DETALLE), el ahorro de
+  // cada producto pasa a ser su impacto en esos meses, y solo quedan los productos con ahorro en ellos.
+  const mesesSel = negMesesFiltro();
+  const porMes = mesesSel.length > 0 && NEG_DATA.productos.some(p => p.impactoMes);
+  const mesesTxt = mesesSel.map(m => m.charAt(0) + m.slice(1).toLowerCase()).join(' + ');
+  let sumBase = 0;
+  if (porMes) {
+    rows = rows.map(p => {
+      const imp = mesesSel.reduce((a, m) => a + ((p.impactoMes || {})[m] || 0), 0);
+      sumBase += mesesSel.reduce((a, m) => a + ((p.baseMes || {})[m] || 0), 0);
+      return Object.assign({}, p, { ahorroMensual: imp });
+    }).filter(p => p.ahorroMensual);
+  }
+  const thAhorro = document.querySelector('#neg-table thead th:nth-child(4)');
+  if (thAhorro) thAhorro.textContent = porMes ? 'Ahorro ' + mesesTxt + ' $' : 'Ahorro Mensual $';
+  const sub = document.querySelector('#neg-table').closest('.chart-card').querySelector('.card-sub');
+  if (sub) sub.textContent = porMes
+    ? 'Ahorro real de ' + mesesTxt + ' (hoja DETALLE del Excel de Ahorros) · solo productos con ahorro en ese periodo'
+    : (mesesSel.length ? '⚠️ Este Excel no trae la hoja DETALLE: no se puede filtrar por mes, se muestra el total' : 'Precio actual vs. negociado, ahorro mensual y estado de la negociación');
+
   const sumMensual = rows.reduce((a, p) => a + (p.ahorroMensual || 0), 0);
   document.getElementById('neg-count').textContent = rows.length;
 
@@ -3827,18 +4002,18 @@ function renderNegociacionesTab() {
 
   document.getElementById('neg-tfoot').innerHTML = rows.length ? `<tr style="font-weight:700;background:var(--wine-ghost)">
       <td>TOTAL</td><td></td><td></td>
-      <td class="num var-down">${negFmt(sumMensual)}</td><td></td>
+      <td class="num var-down">${negFmt(sumMensual)}</td><td class="num">${porMes && sumBase ? negFmtPct(sumMensual / sumBase) : ''}</td>
       <td></td>
     </tr>` : '';
 
-  renderNegParticipacionTable(rows.length ? rows : NEG_DATA.productos);
+  renderNegParticipacionTable(rows.length ? rows : (porMes ? [] : NEG_DATA.productos), porMes ? sumMensual : null);
 }
 
 // Misma fórmula que Excel (RESUMEN, tabla "Producto | Ahorro mensual | Participación en el ahorro"):
 // % = Ahorro mensual del producto / Ahorro Mensual Identificado (TOTAL), en el mismo orden del detalle.
-function renderNegParticipacionTable(rows) {
+function renderNegParticipacionTable(rows, totalMes) {
   const tbody = document.getElementById('neg-part-tbody');
-  const total = NEG_DATA.kpis.ahorroMensualTotal || 0;
+  const total = (totalMes != null ? totalMes : NEG_DATA.kpis.ahorroMensualTotal) || 0;
   document.getElementById('neg-part-total').textContent = Math.round(total).toLocaleString('es-CO');
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-light);padding:1.5rem">Sin datos para el filtro seleccionado.</td></tr>'; return; }
   tbody.innerHTML = rows.map(p => {
@@ -5082,7 +5257,7 @@ function actualizarRestoreFromStorage() {
     const otif = comprasStoreGet('montolivo_otif_data');
     if (otif) OTIF_DATA = JSON.parse(otif);
     const neg = comprasStoreGet('montolivo_neg_data');
-    if (neg) NEG_DATA = JSON.parse(neg);
+    if (neg) NEG_DATA = negKeepImpactoMes(JSON.parse(neg), NEG_DATA);
     const principal = comprasStoreGet('montolivo_principal_data');
     if (principal) {
       const r = JSON.parse(principal);
@@ -5188,7 +5363,7 @@ function actualizarCargarRespaldo(ev) {
     try {
       const snapshot = JSON.parse(e.target.result);
       if (snapshot.otif) OTIF_DATA = snapshot.otif;
-      if (snapshot.neg) NEG_DATA = snapshot.neg;
+      if (snapshot.neg) NEG_DATA = negKeepImpactoMes(snapshot.neg, NEG_DATA);
       if (snapshot.price) PRICE_DATA = snapshot.price;
       if (snapshot.ventas) VENTAS_DATA = snapshot.ventas;
       if (snapshot.principal) {
