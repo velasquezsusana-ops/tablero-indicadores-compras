@@ -597,7 +597,7 @@ footer strong { color: rgba(255,255,255,0.8); }
   <div class="chart-grid-1">
     <div class="chart-card">
       <div class="card-title">Ventas vs. Compras por Mes</div>
-      <div class="card-sub" id="sub-ventas-compras">Valor neto de ventas y compras por mes (COP Millones) — Ene 2025 – Ago 2026</div>
+      <div class="card-sub" id="sub-ventas-compras">Valor neto de ventas y compras por mes (COP Millones) — <span class="periodo-total">Ene 2025 – Ago 2026</span></div>
       <div class="chart-wrap" style="height:280px"><canvas id="ch-ventas-compras"></canvas></div>
       <div class="card-note" id="note-ventas-compras">ⓘ % Compras / Ventas: –</div>
       <div style="overflow-x:auto; margin-top:0.75rem">
@@ -752,7 +752,7 @@ footer strong { color: rgba(255,255,255,0.8); }
   <div class="chart-grid-1" id="card-tendencia-proveedor" style="display:none">
     <div class="chart-card">
       <div class="card-title" id="tendencia-proveedor-title">Tendencia Histórica de Compra — Proveedor</div>
-      <div class="card-sub">Evolución mensual completa Ene 2025 – Ago 2026 del proveedor seleccionado en el filtro superior</div>
+      <div class="card-sub">Evolución mensual completa <span class="periodo-total">Ene 2025 – Ago 2026</span> del proveedor seleccionado en el filtro superior</div>
       <div class="chart-wrap" style="height:240px"><canvas id="ch-tendencia-proveedor"></canvas></div>
     </div>
   </div>
@@ -761,7 +761,7 @@ footer strong { color: rgba(255,255,255,0.8); }
   <div class="chart-grid-1">
     <div class="chart-card">
       <div class="card-title">Gasto, Cantidad y Ticket Promedio — Todos los Proveedores (<span id="hist-prov-count">–</span>)</div>
-      <div class="card-sub">Histórico Ene 2025 – Ago 2026 · cantidad homologada a kg usando la hoja "Und de medida" del archivo de compras (factor oficial por ítem)</div>
+      <div class="card-sub">Histórico <span class="periodo-total">Ene 2025 – Ago 2026</span> · cantidad homologada a kg usando la hoja "Und de medida" del archivo de compras (factor oficial por ítem)</div>
       <div style="overflow: auto; max-height: 600px">
         <table class="data-table" id="hist-prov-table">
           <thead><tr>
@@ -796,7 +796,7 @@ footer strong { color: rgba(255,255,255,0.8); }
   <div class="chart-grid-1">
     <div class="chart-card">
       <div class="card-title">Gasto, Cantidad y Precio Promedio — Todos los Ítems (<span id="hist-item-count">–</span>)</div>
-      <div class="card-sub">Histórico Ene 2025 – Ago 2026 · cantidad y precio homologados usando el factor oficial de la hoja "Und de medida" del archivo de compras (a gramos si el ítem se controla por peso, a unidades si se controla por pieza)</div>
+      <div class="card-sub">Histórico <span class="periodo-total">Ene 2025 – Ago 2026</span> · cantidad y precio homologados usando el factor oficial de la hoja "Und de medida" del archivo de compras (a gramos si el ítem se controla por peso, a unidades si se controla por pieza)</div>
       <div style="overflow: auto; max-height: 600px">
         <table class="data-table" id="hist-item-table">
           <thead><tr>
@@ -931,7 +931,7 @@ footer strong { color: rgba(255,255,255,0.8); }
   <div class="chart-grid-1">
     <div class="chart-card">
       <div class="card-title">Evolución Mensual — OT vs IF vs OTIF</div>
-      <div class="card-sub">% de líneas por mes según fecha de la orden (Ene 2025 – Ago 2026)</div>
+      <div class="card-sub">% de líneas por mes según fecha de la orden (<span class="periodo-total">Ene 2025 – Ago 2026</span>)</div>
       <div class="chart-wrap" style="height:280px"><canvas id="ch-otif-mensual"></canvas></div>
     </div>
   </div>
@@ -1679,8 +1679,24 @@ const BODEGA_ITEM_DETAIL = {"months":["2025-01","2025-02","2025-03","2025-04","2
 // ══════════════════════════════════════════════════════════════════════════
 // HELPERS Y ESTADO GLOBAL
 // ══════════════════════════════════════════════════════════════════════════
-const months    = Object.keys(D.monthlySpend);
-const monthsLbl = months.map(m => { const [y,mo] = m.split('-'); return ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][+mo]+' '+y.slice(2); });
+// Meses del tablero: salen de los datos (FILTER.months), no de una lista fija, para que
+// los meses nuevos (Oct, Nov, Dic, 2027…) aparezcan solos al conectar la carpeta.
+let months    = [];
+let monthsLbl = [];
+const MESES_CORTOS = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function mesLargoLbl(m) { const [y,mo] = m.split('-'); return MESES_CORTOS[+mo]+' '+y; }
+// "Ene 2025 – <último mes con datos>"
+function periodoTotalLbl(sep) { return months.length ? mesLargoLbl(months[0]) + (sep || ' – ') + mesLargoLbl(months[months.length-1]) : ''; }
+function refreshMonths() {
+  months = ((FILTER && FILTER.months && FILTER.months.length) ? FILTER.months : Object.keys(D.monthlySpend).sort()).slice();
+  monthsLbl = months.map(m => { const [y,mo] = m.split('-'); return MESES_CORTOS[+mo]+' '+y.slice(2); });
+  // el motor de "Conectar carpeta" arranca al menos con los meses ya publicados
+  try { if (months.length > ACTUALIZAR_MONTHS_ALL.length) actualizarSetMeses(months[months.length-1]); } catch (e) { /* aún no definido en la carga inicial */ }
+  document.querySelectorAll('.periodo-total').forEach(el => el.textContent = periodoTotalLbl());
+  const st = document.getElementById('compras-status-text');
+  if (st && st.textContent.startsWith('Período:')) st.textContent = 'Período: ' + periodoTotalLbl(' — ');
+}
+refreshMonths();
 
 const COLORS = {
   wine: '#7A1A2E', wineDark: '#4F0F1D', wineMid: '#9B2740', wineLight: '#C4516A',
@@ -1846,7 +1862,7 @@ function getActiveInfo() {
       badge = fcount.toLocaleString('es-CO') + ' facturas';
     }
   }
-  const label = parts.length ? parts.join(' · ') : 'Ene 2025 — Ago 2026';
+  const label = parts.length ? parts.join(' · ') : periodoTotalLbl(' — ');
   return { total, label, badge, ctx: ctxs.length ? ctxs[0] : null, ctxs };
 }
 
@@ -1869,9 +1885,10 @@ function populateFechaOptions() {
   refreshMsToggleLabel('fecha');
 }
 function populateFilters() {
+  refreshMonths();
   const selAnio = document.getElementById('f-anio-list');
   selAnio.innerHTML = '';
-  ['2025','2026'].forEach(y => {
+  [...new Set(months.map(m => m.slice(0,4)))].forEach(y => {
     const label = document.createElement('label');
     label.className = 'ms-option';
     label.innerHTML = `<input type="checkbox" value="${y}" onchange="onMsCheckChange('anio')"><span>${y}</span>`;
@@ -2688,11 +2705,11 @@ function renderVentasCompras() {
   if (filterMeses.length) parts.push(mesLabel());
   if (filterBodegas.length) parts.push(bodegaLabel());
   if (ctxs.length) parts.push(`Compras filtradas por ${ctxs[0].kind === 'prov' ? 'proveedor' : 'ítem'}: ${ctxs.length === 1 ? ctxs[0].obj.name : ctxs.length + ' seleccionados'}`);
-  const periodTxt = parts.length ? parts.join(' · ') : 'Ene 2025 – Ago 2026';
+  const periodTxt = parts.length ? parts.join(' · ') : periodoTotalLbl();
   document.getElementById('sub-ventas-compras').textContent =
     'Valor neto de ventas y compras por mes (COP Millones) — ' + periodTxt;
   document.getElementById('note-ventas-compras').textContent =
-    `ⓘ % Compras / Ventas: ${ratio.toFixed(1)}% — ${fmt(totalCompras)} en compras sobre ${fmt(totalVentas)} en ventas${periodTxt !== 'Ene 2025 – Ago 2026' ? ' (' + periodTxt + ')' : ' (todo el período)'}`;
+    `ⓘ % Compras / Ventas: ${ratio.toFixed(1)}% — ${fmt(totalCompras)} en compras sobre ${fmt(totalVentas)} en ventas${periodTxt !== periodoTotalLbl() ? ' (' + periodTxt + ')' : ' (todo el período)'}`;
 
   charts['ch-ventas-compras'] = new Chart(document.getElementById('ch-ventas-compras'), {
     type: 'bar',
@@ -3478,7 +3495,7 @@ function renderBeneficiosTab() {
 function distribPeriodoLbl() {
   if (filterMeses.length) return mesLabel();
   if (filterAnios.length) return anioLabel();
-  return 'Ene 2025 – Ago 2026';
+  return periodoTotalLbl();
 }
 
 // Suma un array mensual [19] sobre los índices activos (o el total precalculado si no hay filtro de fecha)
@@ -4597,7 +4614,7 @@ function renderHistOCTab() {
 
   // ── KPIs con filtro de año/mes (selección múltiple: se suma sobre los meses activos) ──
   let montoKpi = h.kpi.monto_bn;
-  let periodoLbl = 'Ene 2025 – Ago 2026';
+  let periodoLbl = periodoTotalLbl();
   let totalKpi = h.kpi.total;
   const idxs = dateIdxs();
   if (filterAnios.length === 1) periodoLbl = 'Año ' + filterAnios[0] + (filterAnios[0]==='2026' ? ' (parcial)' : '');
@@ -4756,7 +4773,7 @@ function renderDetOCTab() {
   const oc = DN.ocDetail;
 
   // ── KPIs con filtro de año/mes (selección múltiple: se suma/promedia sobre los meses activos) ──
-  let montoKpi = oc.kpi.monto_bn, periodoLbl = 'Ene 2025 – Ago 2026';
+  let montoKpi = oc.kpi.monto_bn, periodoLbl = periodoTotalLbl();
   let cantKpi = oc.kpi.cantidad, provKpi = oc.kpi.proveedores;
   let prom3mKpi = oc.kpi.prom3m, prom3mSub = 'Promedio últimos 3 meses (M COP)';
   const idxs = dateIdxs();
@@ -5402,9 +5419,40 @@ function actualizarCargarRespaldo(ev) {
 // Proveedores, Ítems, Ajustes, Devoluciones, Mermas, Órdenes Completas y
 // Detalle OC).
 // ══════════════════════════════════════════════════════════════════════════
-const ACTUALIZAR_MONTHS_ALL = ["2025-01","2025-02","2025-03","2025-04","2025-05","2025-06","2025-07","2025-08",
-  "2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09"];
-const ACTUALIZAR_MESES_VALIDOS = new Set(ACTUALIZAR_MONTHS_ALL);
+// Meses desde Ene 2025 hasta el último mes con datos en los Excel (mínimo Sep 2026, nunca
+// después del mes actual — así una fecha mal digitada en el futuro no crea meses vacíos).
+let ACTUALIZAR_MONTHS_ALL = [];
+let ACTUALIZAR_MESES_VALIDOS = new Set();
+function actualizarSetMeses(ultimo) {
+  const out = []; let y = 2025, m = 1;
+  while (true) {
+    const k = y + '-' + String(m).padStart(2, '0');
+    out.push(k);
+    if (k >= ultimo) break;
+    if (++m > 12) { m = 1; y++; }
+  }
+  ACTUALIZAR_MONTHS_ALL = out;
+  ACTUALIZAR_MESES_VALIDOS = new Set(out);
+}
+actualizarSetMeses('2026-09');
+// Busca el último mes con datos en los archivos adjuntos y ajusta la lista de meses.
+function actualizarAjustarMeses() {
+  const hoy = new Date();
+  const tope = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
+  let ultimo = '2026-09';
+  if (typeof months !== 'undefined' && months.length && months[months.length - 1] > ultimo) ultimo = months[months.length - 1];
+  [['historico', 'Fecha'], ['orden', 'Fecha orden'], ['salidas', 'Fecha'], ['ventas', 'Fecha']].forEach(([id, col]) => {
+    const t = actualizarTemp[id];
+    if (!t || !t.rows) return;
+    t.rows.forEach(r => {
+      const d = actualizarParseDate(r[col]);
+      if (!d || isNaN(d)) return;
+      const k = actualizarMonthKey(d);
+      if (k > ultimo && k <= tope) ultimo = k;
+    });
+  });
+  actualizarSetMeses(ultimo);
+}
 
 function actualizarParseDate(v) {
   if (v == null || v === '') return null;
@@ -5943,8 +5991,7 @@ function actualizarRecalcularPrincipal() {
 function actualizarRecalcularOtif() {
   const histRows = actualizarTemp['historico'].rows;
   const ordRows = actualizarTemp['orden'].rows;
-  const monthsAll = ["2025-01","2025-02","2025-03","2025-04","2025-05","2025-06","2025-07","2025-08",
-    "2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09"];
+  const monthsAll = ACTUALIZAR_MONTHS_ALL.slice();
   const monthIdx = {}; monthsAll.forEach((m,i) => monthIdx[m] = i);
   const zeros = () => Array(monthsAll.length).fill(0);
   const newBucket = () => ({ n: zeros(), ifOk: zeros(), otOk: zeros(), otifOk: zeros(), valorEval: zeros(), valorOtifOk: zeros() });
@@ -6019,6 +6066,7 @@ async function actualizarPublicar(silent) {
   window.__comprasGuardadoBytes = 0;
   const now = new Date();
   const fechaTxt = now.toLocaleDateString('es-CO') + ' ' + now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+  actualizarAjustarMeses();
 
   // Ahorros a Septiembre -> Negociaciones (reutiliza el parser ya usado por esa pestaña)
   if (actualizarTemp['ahorros']) {
