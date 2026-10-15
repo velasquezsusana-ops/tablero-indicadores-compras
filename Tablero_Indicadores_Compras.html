@@ -5443,17 +5443,32 @@ function actualizarAjustarMeses() {
   const tope = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
   let ultimo = '2026-09';
   if (typeof months !== 'undefined' && months.length && months[months.length - 1] > ultimo) ultimo = months[months.length - 1];
-  [['historico', 'Fecha'], ['orden', 'Fecha orden'], ['salidas', 'Fecha'], ['ventas', 'Fecha']].forEach(([id, col]) => {
+  const hasta = comprasFechasHastaGet();
+  [['historico', 'Fecha', 'Histórico'], ['orden', 'Fecha orden', 'Orden de compra'], ['salidas', 'Fecha', 'Salidas'], ['ventas', 'Fecha', 'Ventas']].forEach(([id, col, lbl]) => {
     const t = actualizarTemp[id];
     if (!t || !t.rows) return;
+    let max = null;
     t.rows.forEach(r => {
       const d = actualizarParseDate(r[col]);
       if (!d || isNaN(d)) return;
       const k = actualizarMonthKey(d);
-      if (k > ultimo && k <= tope) ultimo = k;
+      if (k > tope) return; // fechas a futuro (mal digitadas) no cuentan
+      if (k > ultimo) ultimo = k;
+      if (!max || d > max) max = d;
     });
+    if (max) hasta[lbl] = max.toLocaleDateString('es-CO');
   });
+  try { localStorage.setItem('comprasFechasHasta', JSON.stringify(hasta)); } catch (e) {}
   actualizarSetMeses(ultimo);
+}
+// Última fecha con datos de cada Excel, para mostrar "datos hasta …" en el estado de la carpeta.
+function comprasFechasHastaGet() {
+  try { return JSON.parse(localStorage.getItem('comprasFechasHasta') || '{}'); } catch (e) { return {}; }
+}
+function comprasFechasHastaTxt() {
+  const h = comprasFechasHastaGet();
+  const k = Object.keys(h);
+  return k.length ? 'Datos hasta: ' + k.map(x => x + ' ' + h[x]).join(' · ') : '';
 }
 
 function actualizarParseDate(v) {
@@ -6304,6 +6319,7 @@ async function actualizarPublicar(silent) {
     let msg = actualizados.length
       ? '¡Datos publicados con éxito! Se actualizaron: ' + actualizados.join(', ') + '. Guardado en el navegador: ' + mbGuardado + ' MB (comprimido).'
       : 'Archivos recibidos, sin indicadores recalculados aún.';
+    if (comprasFechasHastaTxt()) msg += ' ' + comprasFechasHastaTxt() + '.';
     if (pendientes.length) msg += ' Pendiente de conectar: ' + pendientes.join(' · ') + '.';
     if (actualizarSinPersistir.length) msg += ' ⚠ No se pudo guardar para la próxima vez que abras la página porque supera el límite de almacenamiento del navegador: ' + actualizarSinPersistir.join(', ') + '.';
     if (actualizados.length) {
@@ -6408,7 +6424,7 @@ async function comprasTryAutoLoadFromDisk(silent, force) {
     if (toRead.some(id => GRUPO.includes(id))) GRUPO.forEach(id => { if (files[id] && !toRead.includes(id)) toRead.push(id); });
     toRead = ACTUALIZAR_FILES.map(f => f.id).filter(id => toRead.includes(id));
     if (!toRead.length) {
-      comprasSetStatus('live', 'Conectado — datos al día (sin archivos nuevos)');
+      comprasSetStatus('live', 'Conectado — sin archivos nuevos' + (comprasFechasHastaTxt() ? ' · ' + comprasFechasHastaTxt() : ''));
       const rb = document.getElementById('compras-btn-refresh');
       if (rb) rb.disabled = false;
       return true;
@@ -6434,7 +6450,8 @@ async function comprasTryAutoLoadFromDisk(silent, force) {
     toRead.forEach(id => { if (actualizarPublishedMeta[id]) lastM[id] = newM[id]; });
     try { localStorage.setItem('comprasLastMtimes', JSON.stringify(lastM)); } catch (e) {}
 
-    let statusMsg = 'Conectado — datos al día';
+    let statusMsg = 'Conectado';
+    if (comprasFechasHastaTxt()) statusMsg += ' · ' + comprasFechasHastaTxt();
     if (faltan.length) statusMsg += ' (faltan: ' + faltan.map(f => f.label).join(', ') + ')';
     comprasSetStatus('live', statusMsg);
     const refreshBtn = document.getElementById('compras-btn-refresh');
