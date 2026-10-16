@@ -3718,12 +3718,15 @@ function preciosRenderCabecera(cmp, rows) {
   const t = preciosTotales(rows);
   const mesTxt = cmp ? mesLargoLbl(cmp.mes) : 'el último mes';
   const pct = v => t.gasto ? (v / t.gasto * 100).toFixed(1) + '% de lo comprado' : '';
+  // En cada tarjeta, qué mes se analiza y contra qué meses se compara (ej. "Sep 2026 vs prom. Jun 26, Jul 26, Ago 26")
+  const vsTxt = cmp ? '<div style="font-size:.72rem;font-weight:700;color:var(--wine-dark);margin-top:-.05rem">' + mesLargoLbl(cmp.mes)
+    + ' vs prom. ' + cmp.ventana.slice(0, -1).map(mesCortoLbl).join(', ') + '</div>' : '';
   tot.innerHTML =
-    totCard('#DC2626', 'Sobrecosto por alzas de precio', '+' + fmtPesos(t.alza), t.nAlza + ' combinaciones subieron · ' + pct(t.alza)) +
-    totCard('#16A34A', 'Ahorro por bajas de precio', '−' + fmtPesos(t.baja), t.nBaja + ' combinaciones bajaron · ' + pct(t.baja)) +
+    totCard('#DC2626', 'Sobrecosto por alzas de precio', '+' + fmtPesos(t.alza), vsTxt + t.nAlza + ' combinaciones subieron · ' + pct(t.alza)) +
+    totCard('#16A34A', 'Ahorro por bajas de precio', '−' + fmtPesos(t.baja), vsTxt + t.nBaja + ' combinaciones bajaron · ' + pct(t.baja)) +
     totCard(t.neto > 0 ? '#DC2626' : '#16A34A', t.neto > 0 ? 'Resultado neto: sobrecosto' : 'Resultado neto: ahorro',
-      (t.neto > 0 ? '+' : '−') + fmtPesos(t.neto), pct(Math.abs(t.neto)) + ' frente a pagar el promedio de los 3 meses anteriores') +
-    totCard('var(--wine)', 'Compras comparadas en ' + mesTxt, fmtPesos(t.gasto), t.n + ' combinaciones proveedor + ítem con precio de referencia');
+      (t.neto > 0 ? '+' : '−') + fmtPesos(t.neto), vsTxt + pct(Math.abs(t.neto)) + ' frente a pagar el promedio de los 3 meses anteriores') +
+    totCard('var(--wine)', 'Compras comparadas en ' + mesTxt, fmtPesos(t.gasto), vsTxt + t.n + ' combinaciones proveedor + ítem con precio de referencia');
 }
 
 function preciosSortClick(col) {
