@@ -3705,11 +3705,8 @@ function preciosRenderCabecera(cmp, rows) {
     txt.innerHTML = 'Para elegir otro mes, actualiza los datos (↻ Actualizar ahora) con esta versión del tablero.';
   } else {
     sel.disabled = false;
-    const MA = PRICE_DATA.months;
-    sel.innerHTML = preciosMesesDisponibles().slice().reverse().map(m => {
-      const k = MA.indexOf(m), ant = MA.slice(Math.max(0, k - 3), k).map(mesCortoLbl);
-      return `<option value="${m}"${m === cmp.mes ? ' selected' : ''}>${mesLargoLbl(m)} vs ${ant.join(', ')}</option>`;
-    }).join('');
+    sel.innerHTML = preciosMesesDisponibles().slice().reverse().map(m =>
+      `<option value="${m}"${m === cmp.mes ? ' selected' : ''}>${mesLargoLbl(m)}</option>`).join('');
     const ant = cmp.ventana.slice(0, -1).map(mesCortoLbl);
     const hoy = new Date(), mesHoy = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
     txt.innerHTML = 'se compara con el precio promedio de <strong>' + ant.join(', ') + '</strong>'
