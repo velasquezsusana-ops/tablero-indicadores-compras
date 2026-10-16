@@ -1562,12 +1562,13 @@ footer strong { color: rgba(255,255,255,0.8); }
 <section id="tab-envios" class="tab-panel"><div class="filter-bar"><span class="filter-label">Año</span><select class="filter-select" id="v-anio"><option value="">Todos</option></select><span class="filter-label">Mes</span><select class="filter-select" id="v-mes"><option value="">Todos</option></select><span class="filter-label">Semana</span><div class="v-ms" id="v-sem-ms" style="position:relative;display:inline-block;"><button type="button" class="filter-select v-ms-btn" onclick="vMsToggle('v-sem')" style="cursor:pointer;text-align:left;min-width:130px;">Todas</button><div class="v-ms-panel" id="v-sem-panel" style="display:none;position:absolute;top:105%;left:0;z-index:60;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:.5rem;max-height:320px;overflow-y:auto;min-width:180px;"></div></div><span class="filter-label">PDV</span><div class="v-ms" id="v-pdv-ms" style="position:relative;display:inline-block;"><button type="button" class="filter-select v-ms-btn" onclick="vMsToggle('v-pdv')" style="cursor:pointer;text-align:left;min-width:130px;">Todos</button><div class="v-ms-panel" id="v-pdv-panel" style="display:none;position:absolute;top:105%;left:0;z-index:60;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:.5rem;max-height:320px;overflow-y:auto;min-width:260px;"></div></div><span class="filter-label">Referencia</span><div class="v-ms" id="v-ref-ms" style="position:relative;display:inline-block;"><button type="button" class="filter-select v-ms-btn" onclick="vMsToggle('v-ref')" style="cursor:pointer;text-align:left;min-width:130px;">Todas</button><div class="v-ms-panel" id="v-ref-panel" style="display:none;position:absolute;top:105%;left:0;z-index:60;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:.5rem;max-height:320px;overflow-y:auto;min-width:260px;"></div></div><span class="filter-label">Tipo</span><div class="v-ms" id="v-tipo-ms" style="position:relative;display:inline-block;"><button type="button" class="filter-select v-ms-btn" onclick="vMsToggle('v-tipo')" style="cursor:pointer;text-align:left;min-width:130px;">Todos</button><div class="v-ms-panel" id="v-tipo-panel" style="display:none;position:absolute;top:105%;left:0;z-index:60;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:.5rem;max-height:260px;overflow-y:auto;min-width:220px;"></div></div><span class="filter-label">Descripción</span><div class="v-ms" id="v-desc-ms" style="position:relative;display:inline-block;"><button type="button" class="filter-select v-ms-btn" onclick="vMsToggle('v-desc')" style="cursor:pointer;text-align:left;min-width:130px;">Todas</button><div class="v-ms-panel" id="v-desc-panel" style="display:none;position:absolute;top:105%;left:0;z-index:60;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:.5rem;max-height:320px;overflow-y:auto;min-width:260px;"></div></div><button class="btn-reset" onclick="vResetFilters()">&#x21BA; Limpiar</button><span class="filter-info" id="v-info">Cargando...</span></div><main style="padding:2rem;max-width:1700px;margin:0 auto;"><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1.1rem;margin-bottom:2rem;"><div class="kpi-card" style="border-left:5px solid var(--wine);"><div class="kpi-badge" style="background:var(--wine-pale);color:var(--wine);">Total L&iacute;neas</div><div id="v-kpi-total" class="kpi-val" style="color:var(--wine);font-family:Segoe UI,Arial,sans-serif;font-size:1.75rem;font-weight:700;">&#8212;</div><div id="v-kpi-total-n" style="font-size:.72rem;color:var(--text-muted);margin-top:.5rem;">&#8212;</div></div><div class="kpi-card" style="border-left:5px solid #16A34A;"><div class="kpi-badge" style="background:#DCFCE7;color:#15803D;">% Cumplimiento L&iacute;neas</div><div id="v-kpi-lineas" class="kpi-val" style="color:#15803D;font-family:Segoe UI,Arial,sans-serif;font-size:1.75rem;font-weight:700;">&#8212;</div><div id="v-kpi-lineas-n" style="font-size:.72rem;color:var(--text-muted);margin-top:.5rem;">&#8212;</div></div></div><div style="background:#fff;border-radius:14px;box-shadow:var(--shadow-sm);padding:1.25rem;margin-bottom:2rem;">
 <div style="font-family:Segoe UI,Arial,sans-serif;font-size:1.3rem;font-weight:600;color:var(--wine-dark);display:flex;align-items:center;gap:.6rem;margin-bottom:.35rem;"><span style="display:inline-block;width:4px;height:22px;background:linear-gradient(180deg,var(--wine),var(--wine-light));border-radius:99px;"></span>Faltantes: comparación mes vs mes</div>
 <div style="font-size:.72rem;color:var(--text-muted);margin-bottom:1rem;">% de líneas de pedido con faltante (no se envió completo). Esta sección usa los filtros de PDV, Referencia, Tipo y Descripción, pero no los de Año, Mes y Semana, para poder comparar meses entre sí.</div>
-<div style="font-weight:700;font-size:.85rem;color:var(--wine-dark);margin-bottom:.4rem;">% de faltantes por mes</div>
-<div style="height:260px;position:relative;margin-bottom:1.25rem;"><canvas id="v-cmp-trend"></canvas></div>
 <div class="mes-picker" style="box-shadow:none;background:var(--wine-pale);">
 <span class="filter-label" style="margin:0">Comparar</span><select class="filter-select" id="v-cmp-a"></select>
 <span>contra</span><select class="filter-select" id="v-cmp-b"></select>
+<label style="display:flex;align-items:center;gap:.35rem;margin-left:auto;cursor:pointer;"><input type="checkbox" id="v-cmp-todos"> Ver todos los meses en la gráfica</label>
 </div>
+<div style="font-weight:700;font-size:.85rem;color:var(--wine-dark);margin-bottom:.4rem;">% de faltantes por mes</div>
+<div style="height:260px;position:relative;margin-bottom:1.25rem;"><canvas id="v-cmp-trend"></canvas></div>
 <div class="tot-grid" id="v-cmp-kpis"></div>
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.5rem;">
 <div><div style="font-weight:700;font-size:.85rem;color:var(--wine-dark);margin-bottom:.4rem;">% de faltantes por tipo de referencia</div>
@@ -3704,8 +3705,11 @@ function preciosRenderCabecera(cmp, rows) {
     txt.innerHTML = 'Para elegir otro mes, actualiza los datos (↻ Actualizar ahora) con esta versión del tablero.';
   } else {
     sel.disabled = false;
-    sel.innerHTML = preciosMesesDisponibles().slice().reverse().map(m =>
-      `<option value="${m}"${m === cmp.mes ? ' selected' : ''}>${mesLargoLbl(m)}</option>`).join('');
+    const MA = PRICE_DATA.months;
+    sel.innerHTML = preciosMesesDisponibles().slice().reverse().map(m => {
+      const k = MA.indexOf(m), ant = MA.slice(Math.max(0, k - 3), k).map(mesCortoLbl);
+      return `<option value="${m}"${m === cmp.mes ? ' selected' : ''}>${mesLargoLbl(m)} vs ${ant.join(', ')}</option>`;
+    }).join('');
     const ant = cmp.ventana.slice(0, -1).map(mesCortoLbl);
     const hoy = new Date(), mesHoy = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
     txt.innerHTML = 'se compara con el precio promedio de <strong>' + ant.join(', ') + '</strong>'
@@ -7605,11 +7609,13 @@ function vCompararMeses(){
   var A=V_CMP.a,B=V_CMP.b;
   var pctF=function(arr){var g=vagg(arr||[]); return g.n?g.incumpl/g.n*100:null;};
 
-  // 1) Tendencia: % de faltantes de todos los meses (los 2 elegidos resaltados)
-  var vals=ms.map(function(m){return pctF(byM[m]);});
-  vCmpChart("v-cmp-trend",{type:"bar",data:{labels:ms.map(vMesLbl),datasets:[{label:"% líneas con faltante",data:vals.map(function(v){return v==null?null:+v.toFixed(1);}),
-    backgroundColor:ms.map(function(m){return m===A?"#7A1A2E":m===B?"#B7A254":"rgba(122,26,46,.28)";}),borderRadius:4}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){var g=vagg(byM[ms[c.dataIndex]]);return c.raw+"% · "+vcn(g.incumpl)+" de "+vcn(g.n)+" líneas";}}}},
+  // 1) % de faltantes: solo los 2 meses elegidos (en orden cronológico), o todos si se marca "Ver todos los meses"
+  var todos=document.getElementById("v-cmp-todos").checked;
+  var msG=todos?ms:ms.filter(function(m){return m===A||m===B;});
+  var vals=msG.map(function(m){return pctF(byM[m]);});
+  vCmpChart("v-cmp-trend",{type:"bar",data:{labels:msG.map(vMesLbl),datasets:[{label:"% líneas con faltante",data:vals.map(function(v){return v==null?null:+v.toFixed(1);}),
+    backgroundColor:msG.map(function(m){return m===A?"#7A1A2E":m===B?"#B7A254":"rgba(122,26,46,.28)";}),borderRadius:4,maxBarThickness:120}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){var g=vagg(byM[msG[c.dataIndex]]);return c.raw+"% · "+vcn(g.incumpl)+" de "+vcn(g.n)+" líneas";}}}},
       scales:{y:{beginAtZero:true,ticks:{callback:function(v){return v+"%";}}},x:{grid:{display:false}}}}});
 
   // 2) Tarjetas A vs B
@@ -7657,6 +7663,7 @@ function vCompararMeses(){
 }
 document.getElementById("v-cmp-a").addEventListener("change",function(){V_CMP.a=this.value;vCompararMeses();});
 document.getElementById("v-cmp-b").addEventListener("change",function(){V_CMP.b=this.value;vCompararMeses();});
+document.getElementById("v-cmp-todos").addEventListener("change",vCompararMeses);
 
 function vApply(){
   var r=vRows();
