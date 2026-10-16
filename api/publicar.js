@@ -4,21 +4,31 @@
 import { put, list, del } from '@vercel/blob';
 import { timingSafeEqual } from 'node:crypto';
 
+// Credenciales del almacenamiento Blob: token clásico (BLOB_READ_WRITE_TOKEN) o, en almacenes nuevos,
+// OIDC + id del almacén (Vercel lo crea como <prefijo>_STORE_ID al conectarlo al proyecto).
+const env = Object.entries(process.env);
+const TOKEN = process.env.BLOB_READ_WRITE_TOKEN || (env.find(([k]) => k.endsWith('_READ_WRITE_TOKEN')) || [])[1];
+const STORE_ID = process.env.BLOB_STORE_ID || (env.find(([k]) => k.endsWith('_STORE_ID')) || [])[1];
+const AUTH = TOKEN ? { token: TOKEN } : STORE_ID ? { storeId: STORE_ID } : null;
+
 const PREFIJO = 'compras/';
 let acceso = null; // 'private' o 'public', según cómo se haya creado el almacenamiento Blob
 
 async function subir(pathname, body, contentType) {
-  const opts = access => ({ access, addRandomSuffix: false, allowOverwrite: true, contentType });
+  const opts = access => ({ ...AUTH, access, addRandomSuffix: false, allowOverwrite: true, contentType });
   if (acceso) return put(pathname, body, opts(acceso));
   try { const r = await put(pathname, body, opts('private')); acceso = 'private'; return r; }
-  catch (e) { const r = await put(pathname, body, opts('public')); acceso = 'public'; return r; }
+  catch (e) {
+    try { const r = await put(pathname, body, opts('public')); acceso = 'public'; return r; }
+    catch (e2) { throw e; } // el error del intento privado es el que explica el problema
+  }
 }
 
 async function listarTodo() {
   const out = [];
   let cursor;
   do {
-    const r = await list({ prefix: PREFIJO, cursor, limit: 1000 });
+    const r = await list({ ...AUTH, prefix: PREFIJO, cursor, limit: 1000 });
     out.push(...r.blobs);
     cursor = r.hasMore ? r.cursor : undefined;
   } while (cursor);
@@ -34,9 +44,14 @@ function claveOk(c) {
 const json = (o, status = 200) => Response.json(o, { status, headers: { 'Cache-Control': 'no-store' } });
 
 export async function POST(request) {
+  try { return await publicar(request); }
+  catch (e) { return json({ error: 'Almacenamiento Blob: ' + e.message }, 500); }
+}
+
+async function publicar(request) {
   if (!process.env.PUBLICAR_CLAVE) return json({ error: 'Falta configurar PUBLICAR_CLAVE en Vercel' }, 500);
   if (!claveOk(request.headers.get('x-clave'))) return json({ error: 'Clave incorrecta' }, 401);
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return json({ error: 'Falta conectar el almacenamiento Blob en Vercel' }, 500);
+  if (!AUTH) return json({ error: 'Falta conectar el almacenamiento Blob en Vercel' }, 500);
 
   const u = new URL(request.url);
   const id = u.searchParams.get('id') || '';
@@ -56,6 +71,6 @@ export async function POST(request) {
   if (partes.length !== total) return json({ error: `Llegaron ${partes.length} de ${total} partes` }, 500);
   await subir(`${PREFIJO}${id}/listo.json`, JSON.stringify({ id: Number(id), total, publicadoEl: new Date().toISOString() }), 'application/json');
   const viejos = todos.filter(b => !b.pathname.startsWith(`${PREFIJO}${id}/`)).map(b => b.url);
-  if (viejos.length) await del(viejos);
+  if (viejos.length) await del(viejos, AUTH);
   return json({ ok: true, id: Number(id) });
 }
