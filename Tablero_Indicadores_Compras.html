@@ -476,7 +476,7 @@ footer strong { color: rgba(255,255,255,0.8); }
   <div class="header-right">
     <div class="live-badge" id="compras-status">
       <span class="live-dot" id="compras-status-dot"></span>
-      <span id="compras-status-text">Período: Ene 2025 — Ago 2026</span>
+      <span id="compras-status-text">Período: Ene 2025 — Sep 2026</span>
     </div>
     <button type="button" class="btn-connect" id="compras-btn-connect" title="Conecta la carpeta con los 8 Excel para leer datos en vivo, sin subirlos uno por uno">🔗 Conectar carpeta en vivo</button>
     <button type="button" class="btn-connect" id="compras-btn-refresh" disabled>↻ Actualizar ahora</button>
@@ -6378,6 +6378,8 @@ function comprasSetStatus(mode, text) {
   const txt = document.getElementById('compras-status-text');
   if (dot) dot.style.background = mode === 'off' ? '#F5A3A3' : '#4ADE80';
   if (txt) txt.textContent = text;
+  const badge = document.getElementById('compras-status');
+  if (badge) badge.title = comprasFechasHastaTxt() || '';
 }
 
 async function comprasPickFolderIfNeeded() {
@@ -6448,7 +6450,7 @@ async function comprasTryAutoLoadFromDisk(silent, force) {
     if (toRead.some(id => GRUPO.includes(id))) GRUPO.forEach(id => { if (files[id] && !toRead.includes(id)) toRead.push(id); });
     toRead = ACTUALIZAR_FILES.map(f => f.id).filter(id => toRead.includes(id));
     if (!toRead.length) {
-      comprasSetStatus('live', 'Conectado — sin archivos nuevos' + (comprasFechasHastaTxt() ? ' · ' + comprasFechasHastaTxt() : ''));
+      comprasSetStatus('live', 'Período: ' + periodoTotalLbl(' — ') + ' · sin archivos nuevos');
       const rb = document.getElementById('compras-btn-refresh');
       if (rb) rb.disabled = false;
       return true;
@@ -6474,8 +6476,7 @@ async function comprasTryAutoLoadFromDisk(silent, force) {
     toRead.forEach(id => { if (actualizarPublishedMeta[id]) lastM[id] = newM[id]; });
     try { localStorage.setItem('comprasLastMtimes', JSON.stringify(lastM)); } catch (e) {}
 
-    let statusMsg = 'Conectado';
-    if (comprasFechasHastaTxt()) statusMsg += ' · ' + comprasFechasHastaTxt();
+    let statusMsg = 'Período: ' + periodoTotalLbl(' — ');
     if (faltan.length) statusMsg += ' (faltan: ' + faltan.map(f => f.label).join(', ') + ')';
     comprasSetStatus('live', statusMsg);
     const refreshBtn = document.getElementById('compras-btn-refresh');
