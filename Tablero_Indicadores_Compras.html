@@ -3765,8 +3765,8 @@ function renderPreciosTab() {
   const lblMes = lbl4[lbl4.length - 1];
   // Encabezados con orden por clic (1er clic menor a mayor ▲, 2º mayor a menor ▼). Se arma aquí y no con el
   // ordenador genérico de .data-table porque esta tabla se redibuja completa en cada filtro.
-  const headLabels = ['Proveedor', 'Ítem', 'UM'].concat(lbl4, ['Variación', '% Var. vs Prom 3M', 'Cantidad ' + lblMes,
-    'Gasto Real ' + lblMes, 'Gasto a Precio Prom 3M', 'Sobrecosto / Ahorro', 'Meses seguidos subiendo']);
+  const headLabels = ['Proveedor', 'Ítem', 'Meses seguidos subiendo', 'UM'].concat(lbl4, ['Variación', '% Var. vs Prom 3M', 'Cantidad ' + lblMes,
+    'Gasto Real ' + lblMes, 'Gasto a Precio Prom 3M', 'Sobrecosto / Ahorro']);
   const headRow = document.getElementById('precios-thead-row');
   headRow.dataset.sortableInit = '1';
   headRow.innerHTML = headLabels.map((l, i) => {
@@ -3779,9 +3779,9 @@ function renderPreciosTab() {
   if (filterItems.length) rows = rows.filter(r => filterItems.includes(r.item));
   if (PRECIOS_SORT) {
     const nP = lbl4.length;
-    const ext = [r => r.proveedor, r => r.item, r => r.um].concat(
+    const ext = [r => r.proveedor, r => r.item, r => r.mesesSubiendo, r => r.um].concat(
       Array.from({ length: nP }, (_, k) => r => r.precios[k]),
-      [r => r.variacionPct, r => r.pctVarVsProm3M, r => r.cantidadMesActual, r => r.gastoRealMesActual, r => r.gastoPrecioProm3M, r => r.sobrecostoAhorro, r => r.mesesSubiendo]);
+      [r => r.variacionPct, r => r.pctVarVsProm3M, r => r.cantidadMesActual, r => r.gastoRealMesActual, r => r.gastoPrecioProm3M, r => r.sobrecostoAhorro]);
     const f = ext[PRECIOS_SORT.col], dir = PRECIOS_SORT.dir;
     rows = rows.slice().sort((a, b) => {
       const va = f(a), vb = f(b);
@@ -3816,6 +3816,7 @@ function renderPreciosTab() {
       return `<tr${isActiveRow ? ' class="is-active"' : ''}>
         <td>${r.proveedor.length>32?r.proveedor.slice(0,30)+'…':r.proveedor}</td>
         <td>${r.item.length>32?r.item.slice(0,30)+'…':r.item}</td>
+        <td style="text-align:center">${preciosCeldaSubiendo(r)}</td>
         <td class="num">${r.um}</td>
         ${precioCells.map(p => `<td class="num">${p}</td>`).join('')}
         <td class="num ${cls}">${varTxt}</td>
@@ -3824,7 +3825,6 @@ function renderPreciosTab() {
         <td class="num">${gastoAC}</td>
         <td class="num">${gastoAD}</td>
         <td class="num ${aeCls}">${aeTxt}</td>
-        <td class="num">${preciosCeldaSubiendo(r)}</td>
       </tr>`;
     }).join('');
   }
