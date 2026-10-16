@@ -7639,9 +7639,9 @@ function vCompararMeses(){
   // 1) % de faltantes de todos los meses (el "Comparar" de abajo no la afecta: solo aplica a tarjetas, tipos y referencias)
   var msG=ms;
   var vals=msG.map(function(m){return pctF(byM[m]);});
-  vCmpChart("v-cmp-trend",{type:"bar",data:{labels:msG.map(vMesLbl),datasets:[{label:"% líneas con faltante",data:vals.map(function(v){return v==null?null:+v.toFixed(1);}),
-    backgroundColor:"#7A1A2E",borderRadius:4,maxBarThickness:120}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){var g=vagg(byM[msG[c.dataIndex]]);return c.raw+"% · "+vcn(g.incumpl)+" de "+vcn(g.n)+" líneas";}}}},
+  vCmpChart("v-cmp-trend",{type:"line",data:{labels:msG.map(vMesLbl),datasets:[{label:"% líneas con faltante",data:vals.map(function(v){return v==null?null:+v.toFixed(1);}),
+    borderColor:"#7A1A2E",backgroundColor:"rgba(122,26,46,.08)",fill:true,tension:0,borderWidth:2.5,pointRadius:5,pointHoverRadius:7,pointBackgroundColor:"#7A1A2E",spanGaps:true}]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{left:12,right:16,top:10}},plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){var g=vagg(byM[msG[c.dataIndex]]);return c.raw+"% · "+vcn(g.incumpl)+" de "+vcn(g.n)+" líneas";}}}},
       scales:{y:{beginAtZero:true,ticks:{callback:function(v){return v+"%";}}},x:{grid:{display:false}}}}});
 
   // 2) Tarjetas A vs B
