@@ -389,6 +389,12 @@ main { padding: 2rem; max-width: 1600px; margin: 0 auto; }
 .tot-card .t-lbl { font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
 .tot-card .t-val { font-size: 1.45rem; font-weight: 700; color: var(--tot-c, var(--wine)); margin: .25rem 0 .15rem; font-family: 'Segoe UI', Arial, sans-serif; }
 .tot-card .t-sub { font-size: .74rem; color: var(--text-muted); line-height: 1.35; }
+.tot-card.clic { cursor: pointer; transition: box-shadow .15s, transform .15s; }
+.tot-card.clic:hover { box-shadow: var(--shadow-md, 0 4px 14px rgba(0,0,0,.12)); transform: translateY(-1px); }
+.tot-card.clic .t-ver { font-size: .7rem; font-weight: 700; color: var(--tot-c, var(--wine)); margin-top: .35rem; }
+.tot-card.activa { outline: 2px solid var(--tot-c, var(--wine)); outline-offset: 2px; }
+.precios-vista { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 8px; padding: .45rem .8rem; margin: .5rem 0 .6rem; font-size: .8rem; }
+.precios-vista button { border: 1px solid var(--wine); background: #fff; color: var(--wine); border-radius: 99px; padding: 2px 10px; font-size: .75rem; font-weight: 700; cursor: pointer; }
 .mes-picker { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; background: #fff; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); padding: .7rem 1rem; margin-bottom: 1.1rem; font-size: .82rem; color: var(--text-muted); }
 .mes-picker strong { color: var(--wine-dark); }
 .alert-card {
@@ -1197,6 +1203,7 @@ footer strong { color: rgba(255,255,255,0.8); }
   <div class="alert-grid" style="grid-template-columns:1fr 1fr" id="precios-insight-grid"></div>
   <div class="chart-card">
     <div class="card-title">Precio Unitario Homologado — Mes elegido y 3 meses anteriores (<span id="precios-count">–</span> combinaciones)</div>
+    <div id="precios-vista"></div>
     <div class="card-sub" id="precios-sub">Comparación mes a mes del costo unitario pagado por ítem y proveedor, homologado a kg o unidad base con los factores corregidos de "precios unitarios" / hoja "Factores conversión"</div>
     <div style="overflow: auto; max-height: 600px">
       <table class="data-table" id="precios-table">
@@ -3712,8 +3719,26 @@ function preciosTotales(rows) {
   t.neto = t.alza - t.baja;
   return t;
 }
-function totCard(color, lbl, val, sub) {
-  return `<div class="tot-card" style="--tot-c:${color}"><div class="t-lbl">${lbl}</div><div class="t-val">${val}</div><div class="t-sub">${sub}</div></div>`;
+function totCard(color, lbl, val, sub, vista) {
+  if (!vista) return `<div class="tot-card" style="--tot-c:${color}"><div class="t-lbl">${lbl}</div><div class="t-val">${val}</div><div class="t-sub">${sub}</div></div>`;
+  const act = PRECIOS_VISTA === vista;
+  return `<div class="tot-card clic${act ? ' activa' : ''}" style="--tot-c:${color}" onclick="preciosVer('${vista}')" title="Clic para ver en la tabla solo estos productos">`
+    + `<div class="t-lbl">${lbl}</div><div class="t-val">${val}</div><div class="t-sub">${sub}</div>`
+    + `<div class="t-ver">${act ? '✕ Ver todos los productos' : '🔍 Ver cuáles son ↓'}</div></div>`;
+}
+// Clic en una tarjeta de Precio Unitario: la tabla muestra solo esos productos (los que subieron, los negociados
+// o los que bajaron sin negociación), ordenados del mayor impacto al menor. Otro clic en la misma tarjeta lo quita.
+let PRECIOS_VISTA = null;
+const PRECIOS_VISTAS = {
+  alza: { txt: 'productos que <strong>subieron de precio</strong> (suman el sobrecosto por alzas)', f: r => r.sobrecostoAhorro > 0.5, dir: -1 },
+  neg:  { txt: 'productos con <strong>precio negociado</strong> 🤝 (Excel de Ahorros) y cuánto se movió su precio frente al promedio de los 3 meses anteriores', f: r => !!r.negociacion, dir: 1 },
+  merc: { txt: 'productos que <strong>bajaron de precio sin negociación</strong> (suman el ahorro por temporada / mercado)', f: r => r.sobrecostoAhorro < -0.5 && !r.negociacion, dir: 1 }
+};
+function preciosVer(v) {
+  PRECIOS_VISTA = PRECIOS_VISTA === v ? null : v;
+  PRECIOS_SORT = null;
+  renderPreciosTab();
+  if (PRECIOS_VISTA) document.getElementById('precios-table').closest('.chart-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function preciosRenderCabecera(cmp, rows) {
   const sel = document.getElementById('precios-mes');
@@ -3750,10 +3775,10 @@ function preciosRenderCabecera(cmp, rows) {
   const sg = v => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtPesos(v);
   const filtrado = filterProvs.length || filterItems.length;
   tot.innerHTML =
-    totCard('#DC2626', 'Sobrecosto por alzas de precio · ' + mesTxt, '+' + fmtPesos(t.alza), hist(x => '+' + fmtPesos(x.alza), '#DC2626') + t.nAlza + ' combinaciones subieron · ' + pct(t.alza)) +
+    totCard('#DC2626', 'Sobrecosto por alzas de precio · ' + mesTxt, '+' + fmtPesos(t.alza), hist(x => '+' + fmtPesos(x.alza), '#DC2626') + t.nAlza + ' combinaciones subieron · ' + pct(t.alza), cmp && 'alza') +
     totCard('#15803D', '🤝 Ahorro por negociación · ' + mesTxt, t.neg != null ? '−' + fmtPesos(t.neg) : '—', hist(x => x.neg != null ? '−' + fmtPesos(x.neg) : '—', '#15803D')
-      + (t.neg != null ? 'Del Excel de Ahorros (Impacto del mes) · ' + pct(t.neg) + (filtrado ? ' · no cambia con los filtros' : '') : 'el Excel de Ahorros no trae este mes')) +
-    totCard('#16A34A', '🌦 Ahorro por temporada / mercado · ' + mesTxt, '−' + fmtPesos(t.bajaMerc), hist(x => '−' + fmtPesos(x.bajaMerc), '#16A34A') + t.nBajaMerc + ' combinaciones bajaron sin negociación · ' + pct(t.bajaMerc)) +
+      + (t.neg != null ? 'Del Excel de Ahorros (Impacto del mes) · ' + pct(t.neg) + (filtrado ? ' · no cambia con los filtros' : '') : 'el Excel de Ahorros no trae este mes'), cmp && 'neg') +
+    totCard('#16A34A', '🌦 Ahorro por temporada / mercado · ' + mesTxt, '−' + fmtPesos(t.bajaMerc), hist(x => '−' + fmtPesos(x.bajaMerc), '#16A34A') + t.nBajaMerc + ' combinaciones bajaron sin negociación · ' + pct(t.bajaMerc), cmp && 'merc') +
     totCard(t.neto > 0 ? '#DC2626' : '#16A34A', (t.neto > 0 ? 'Resultado neto: sobrecosto · ' : 'Resultado neto: ahorro · ') + mesTxt,
       (t.neto > 0 ? '+' : '−') + fmtPesos(t.neto), hist(x => sg(x.neto), x => x.neto > 0 ? '#DC2626' : '#16A34A') + pct(Math.abs(t.neto)) + ' frente a pagar el promedio de los 3 meses anteriores') +
     totCard('var(--wine)', 'Compras comparadas en ' + mesTxt, fmtPesos(t.gasto), hist(x => fmtPesos(x.gasto), 'var(--wine)') + t.n + ' combinaciones proveedor + ítem con precio de referencia');
@@ -3807,8 +3832,21 @@ function renderPreciosTab() {
       return String(va).localeCompare(String(vb), 'es', { numeric: true, sensitivity: 'base' }) * dir;
     });
   }
-  document.getElementById('precios-count').textContent = rows.length;
   preciosRenderCabecera(cmp, rows);
+  const vistaBox = document.getElementById('precios-vista');
+  const vista = cmp && PRECIOS_VISTAS[PRECIOS_VISTA];
+  if (vista) {
+    rows = rows.filter(vista.f);
+    if (!PRECIOS_SORT) rows = rows.slice().sort((a, b) => ((a.sobrecostoAhorro || 0) - (b.sobrecostoAhorro || 0)) * vista.dir);
+    const suma = rows.reduce((a, r) => a + (r.sobrecostoAhorro || 0), 0);
+    vistaBox.innerHTML = '<div class="precios-vista">🔍 Mostrando solo los ' + rows.length + ' ' + vista.txt + ' en ' + mesLargoLbl(cmp.mes)
+      + ' · total en la tabla: <strong>' + (suma > 0 ? '+' : '−') + fmtPesos(suma) + '</strong>'
+      + '<button type="button" onclick="preciosVer(null)">✕ Ver todos</button></div>';
+  } else {
+    PRECIOS_VISTA = null;
+    vistaBox.innerHTML = '';
+  }
+  document.getElementById('precios-count').textContent = rows.length;
 
   const tbody = document.getElementById('precios-tbody');
   if (!rows.length) {
