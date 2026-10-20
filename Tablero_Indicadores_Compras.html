@@ -3667,6 +3667,7 @@ function preciosCompararMes(mes) {
   if (!PRICE_DATA.pares || k < 1) return null;
   const idx = []; for (let j = Math.max(0, k - 3); j <= k; j++) idx.push(j);
   const rows = [];
+  const negRefs = negRefsDelMes(mes);
   PRICE_DATA.pares.forEach(x => {
     const precios = idx.map(j => x.q[j] > 0 && x.b[j] > 0 ? Math.round(x.b[j] / x.q[j] * 100) / 100 : null);
     if (precios.filter(v => v != null).length < 2) return;
@@ -3681,6 +3682,7 @@ function preciosCompararMes(mes) {
     for (let j = k; j >= 1 && preciosAlzaEn(x, j); j--) mesesSub.unshift(MA[j]);
     rows.push({
       mesesSubiendo: mesesSub.length, mesesSubiendoLista: mesesSub,
+      negociacion: negRefs[String(x.r || '').trim().toUpperCase()] || null,
       proveedor: x.p, item: x.i, referencia: x.r, um: x.u, precios,
       variacionPct: actual != null && prom ? Math.round((actual - prom) / prom * 1000) / 10 : null,
       pctVarVsProm3M: actual != null && prom ? (actual - prom) / prom : null,
@@ -3695,12 +3697,17 @@ function preciosCompararMes(mes) {
 }
 // Totales del mes: sobrecosto por alzas (+), ahorro por bajas (−) y neto, sobre las combinaciones comparables.
 function preciosTotales(rows) {
-  const t = { alza: 0, baja: 0, gasto: 0, gastoProm: 0, n: 0, nAlza: 0, nBaja: 0 };
+  // La baja de un ítem con precio negociado vigente (Excel de Ahorros) cuenta como "por negociación";
+  // la de los demás, como "por temporada / mercado".
+  const t = { alza: 0, baja: 0, bajaNeg: 0, bajaMerc: 0, gasto: 0, gastoProm: 0, n: 0, nAlza: 0, nBaja: 0, nBajaNeg: 0, nBajaMerc: 0 };
   rows.forEach(r => {
     if (r.sobrecostoAhorro == null) return;
     t.n++; t.gasto += r.gastoRealMesActual; t.gastoProm += r.gastoPrecioProm3M;
     if (r.sobrecostoAhorro > 0.5) { t.alza += r.sobrecostoAhorro; t.nAlza++; }
-    else if (r.sobrecostoAhorro < -0.5) { t.baja -= r.sobrecostoAhorro; t.nBaja++; }
+    else if (r.sobrecostoAhorro < -0.5) {
+      t.baja -= r.sobrecostoAhorro; t.nBaja++;
+      if (r.negociacion) { t.bajaNeg -= r.sobrecostoAhorro; t.nBajaNeg++; } else { t.bajaMerc -= r.sobrecostoAhorro; t.nBajaMerc++; }
+    }
   });
   t.neto = t.alza - t.baja;
   return t;
@@ -3737,7 +3744,8 @@ function preciosRenderCabecera(cmp, rows) {
   const sg = v => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtPesos(v);
   tot.innerHTML =
     totCard('#DC2626', 'Sobrecosto por alzas de precio · ' + mesTxt, '+' + fmtPesos(t.alza), hist(x => '+' + fmtPesos(x.alza), '#DC2626') + t.nAlza + ' combinaciones subieron · ' + pct(t.alza)) +
-    totCard('#16A34A', 'Ahorro por bajas de precio · ' + mesTxt, '−' + fmtPesos(t.baja), hist(x => '−' + fmtPesos(x.baja), '#16A34A') + t.nBaja + ' combinaciones bajaron · ' + pct(t.baja)) +
+    totCard('#15803D', '🤝 Ahorro por negociación · ' + mesTxt, '−' + fmtPesos(t.bajaNeg), hist(x => '−' + fmtPesos(x.bajaNeg), '#15803D') + t.nBajaNeg + ' combinaciones con precio negociado bajaron · ' + pct(t.bajaNeg)) +
+    totCard('#16A34A', '🌦 Ahorro por temporada / mercado · ' + mesTxt, '−' + fmtPesos(t.bajaMerc), hist(x => '−' + fmtPesos(x.bajaMerc), '#16A34A') + t.nBajaMerc + ' combinaciones bajaron sin negociación · ' + pct(t.bajaMerc)) +
     totCard(t.neto > 0 ? '#DC2626' : '#16A34A', (t.neto > 0 ? 'Resultado neto: sobrecosto · ' : 'Resultado neto: ahorro · ') + mesTxt,
       (t.neto > 0 ? '+' : '−') + fmtPesos(t.neto), hist(x => sg(x.neto), x => x.neto > 0 ? '#DC2626' : '#16A34A') + pct(Math.abs(t.neto)) + ' frente a pagar el promedio de los 3 meses anteriores') +
     totCard('var(--wine)', 'Compras comparadas en ' + mesTxt, fmtPesos(t.gasto), hist(x => fmtPesos(x.gasto), 'var(--wine)') + t.n + ' combinaciones proveedor + ítem con precio de referencia');
@@ -3814,7 +3822,7 @@ function renderPreciosTab() {
       const aeTxt = ae == null ? '–' : (ae > 0 ? '+$' : '−$') + Math.abs(ae).toLocaleString('es-CO', {maximumFractionDigits:0});
       return `<tr${isActiveRow ? ' class="is-active"' : ''}>
         <td>${r.proveedor.length>32?r.proveedor.slice(0,30)+'…':r.proveedor}</td>
-        <td>${r.item.length>32?r.item.slice(0,30)+'…':r.item}</td>
+        <td>${r.negociacion ? '<span title="Precio negociado (Excel de Ahorros): ' + r.negociacion.map(n => n.producto + ' desde ' + n.desde.split('-').reverse().join('/')).join(' · ') + '" style="cursor:help">🤝 </span>' : ''}${r.item.length>32?r.item.slice(0,30)+'…':r.item}</td>
         <td style="text-align:center">${preciosCeldaSubiendo(r)}</td>
         <td class="num">${r.um}</td>
         ${precioCells.map(p => `<td class="num">${p}</td>`).join('')}
@@ -3932,7 +3940,7 @@ function syncDualScrollbar(table) {
 // ══════════════════════════════════════════════════════════════════════════
 // TAB NEGOCIACIONES — carga dinámica de Excel (SheetJS), sin recargar la app
 // ══════════════════════════════════════════════════════════════════════════
-let NEG_DATA = {"kpis":{"meses":[{"mes":"Julio","monto":789677.4193548387,"pct":0.05494209534069486},{"mes":"Agosto","monto":3395483.870967742,"pct":0.02762381642207806},{"mes":"Septiembre","monto":18607850.666666664,"pct":0.06714179150612956}],"ahorroMensualTotal":34507760.0,"proyeccionAnual":414093120.0,"pctAhorroSobreCompraBase":0.09077991347594414},"productos":[{"producto":"Comino molido","precioActual":34000.0,"precioNuevo":22941.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PRUEBA","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Pimienta negra","precioActual":46000.0,"precioNuevo":37222.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Cebolla en polvo","precioActual":18000.0,"precioNuevo":13000.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Snow Flake G2141","precioActual":17400.0,"precioNuevo":13800.0,"ahorroMensual":720000.0,"reduccionPct":0.20689655172413793,"ahorroAnual":8640000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":696000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":3364000}},{"producto":"Carne molida cañón","precioActual":13500.0,"precioNuevo":12500.0,"ahorroMensual":1120000.0,"reduccionPct":0.07407407407407407,"ahorroAnual":13440000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":1082666.6666666667},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":14616000}},{"producto":"Recorte de pechuga","precioActual":13000.0,"precioNuevo":12300.0,"ahorroMensual":1680000.0,"reduccionPct":0.05384615384615385,"ahorroAnual":20160000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":758709.6774193548,"AGOSTO":1680000,"SEPTIEMBRE":1680000},"baseMes":{"JULIO":14090322.58064516,"AGOSTO":31200000,"SEPTIEMBRE":31200000}},{"producto":"Tilapia","precioActual":10500.0,"precioNuevo":9800.0,"ahorroMensual":700000.0,"reduccionPct":0.06666666666666667,"ahorroAnual":8400000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":451612.9032258064,"SEPTIEMBRE":700000},"baseMes":{"JULIO":0,"AGOSTO":6774193.548387096,"SEPTIEMBRE":10500000}},{"producto":"Camarón 71/90 30% glaceo","precioActual":23500.0,"precioNuevo":19800.0,"ahorroMensual":7400000.0,"reduccionPct":0.1574468085106383,"ahorroAnual":88800000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":4933333.333333333},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":31333333.333333332}},{"producto":"Vinipel","precioActual":7300.0,"precioNuevo":6500.0,"ahorroMensual":480000.0,"reduccionPct":0.1095890410958904,"ahorroAnual":5760000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":30967.74193548387,"AGOSTO":480000,"SEPTIEMBRE":480000},"baseMes":{"JULIO":282580.6451612903,"AGOSTO":4380000,"SEPTIEMBRE":4380000}},{"producto":"Solomo redondo (actuales +1 nuevo)","precioActual":46250.0,"precioNuevo":45800.0,"ahorroMensual":1350000.0,"reduccionPct":0.00972972972972973,"ahorroAnual":16200000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":783870.9677419355,"SEPTIEMBRE":1350000},"baseMes":{"JULIO":0,"AGOSTO":80564516.12903227,"SEPTIEMBRE":138750000}},{"producto":"Aceite mezcla soya+palma","precioActual":8500.0,"precioNuevo":8000.0,"ahorroMensual":1500000.0,"reduccionPct":0.058823529411764705,"ahorroAnual":18000000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":150000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":2550000}},{"producto":"Filete de Bassa","precioActual":12000.0,"precioNuevo":10500.0,"ahorroMensual":1500000.0,"reduccionPct":0.125,"ahorroAnual":18000000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":150000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":1200000}},{"producto":"Pasta de tomate Bary","precioActual":18000.0,"precioNuevo":15528.0,"ahorroMensual":197760.0,"reduccionPct":0.13733333333333334,"ahorroAnual":2373120.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":177984},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":1296000}},{"producto":"Mostaza","precioActual":43400.0,"precioNuevo":39060.0,"ahorroMensual":434000.0,"reduccionPct":0.1,"ahorroAnual":5208000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":231466.66666666666},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":2314666.6666666665}},{"producto":"Solomo con cascara","precioActual":46250.0,"precioNuevo":29900.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Filete de pollo","precioActual":24500.0,"precioNuevo":23500.0,"ahorroMensual":390000.0,"reduccionPct":0.04081632653061224,"ahorroAnual":4680000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":182000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":4459000}},{"producto":"Sello de seguridad","precioActual":110.0,"precioNuevo":100.0,"ahorroMensual":200000.0,"reduccionPct":0.09090909090909091,"ahorroAnual":2400000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":180000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":1980000}},{"producto":"Rollo termico caja","precioActual":13458.0,"precioNuevo":11138.0,"ahorroMensual":580000.0,"reduccionPct":0.1723881706048447,"ahorroAnual":6960000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":154666.66666666666},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":897200}},{"producto":"Garbanzo X KG","precioActual":9340.0,"precioNuevo":6532.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Salmon 2-3","precioActual":39000.0,"precioNuevo":37000.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Queso mozarella tajado 800grs","precioActual":35000.0,"precioNuevo":27000.0,"ahorroMensual":16000000.0,"reduccionPct":0.22857142857142856,"ahorroAnual":192000000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":6400000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":28000000}},{"producto":"Mejillon chorito","precioActual":6480.0,"precioNuevo":5200.0,"ahorroMensual":256000.0,"reduccionPct":0.19753086419753085,"ahorroAnual":3072000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":59733.333333333336},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":302400}}],"sourceLabel":"AHORROS A SEPT.xlsx"};
+let NEG_DATA = {"kpis":{"meses":[{"mes":"Julio","monto":789677.4193548387,"pct":0.05494209534069486},{"mes":"Agosto","monto":3395483.870967742,"pct":0.02762381642207806},{"mes":"Septiembre","monto":18607850.666666664,"pct":0.06714179150612956}],"ahorroMensualTotal":34507760.0,"proyeccionAnual":414093120.0,"pctAhorroSobreCompraBase":0.09077991347594414},"productos":[{"producto":"Comino molido","precioActual":34000.0,"precioNuevo":22941.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PRUEBA","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Pimienta negra","precioActual":46000.0,"precioNuevo":37222.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Cebolla en polvo","precioActual":18000.0,"precioNuevo":13000.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Snow Flake G2141","precioActual":17400.0,"precioNuevo":13800.0,"ahorroMensual":720000.0,"reduccionPct":0.20689655172413793,"ahorroAnual":8640000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":696000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":3364000}},{"producto":"Carne molida cañón","precioActual":13500.0,"precioNuevo":12500.0,"ahorroMensual":1120000.0,"reduccionPct":0.07407407407407407,"ahorroAnual":13440000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":1082666.6666666667},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":14616000}},{"producto":"Recorte de pechuga","precioActual":13000.0,"precioNuevo":12300.0,"ahorroMensual":1680000.0,"reduccionPct":0.05384615384615385,"ahorroAnual":20160000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":758709.6774193548,"AGOSTO":1680000,"SEPTIEMBRE":1680000},"baseMes":{"JULIO":14090322.58064516,"AGOSTO":31200000,"SEPTIEMBRE":31200000}},{"producto":"Tilapia","precioActual":10500.0,"precioNuevo":9800.0,"ahorroMensual":700000.0,"reduccionPct":0.06666666666666667,"ahorroAnual":8400000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":451612.9032258064,"SEPTIEMBRE":700000},"baseMes":{"JULIO":0,"AGOSTO":6774193.548387096,"SEPTIEMBRE":10500000}},{"producto":"Camarón 71/90 30% glaceo","precioActual":23500.0,"precioNuevo":19800.0,"ahorroMensual":7400000.0,"reduccionPct":0.1574468085106383,"ahorroAnual":88800000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":4933333.333333333},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":31333333.333333332}},{"producto":"Vinipel","precioActual":7300.0,"precioNuevo":6500.0,"ahorroMensual":480000.0,"reduccionPct":0.1095890410958904,"ahorroAnual":5760000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":30967.74193548387,"AGOSTO":480000,"SEPTIEMBRE":480000},"baseMes":{"JULIO":282580.6451612903,"AGOSTO":4380000,"SEPTIEMBRE":4380000}},{"producto":"Solomo redondo (actuales +1 nuevo)","precioActual":46250.0,"precioNuevo":45800.0,"ahorroMensual":1350000.0,"reduccionPct":0.00972972972972973,"ahorroAnual":16200000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":783870.9677419355,"SEPTIEMBRE":1350000},"baseMes":{"JULIO":0,"AGOSTO":80564516.12903227,"SEPTIEMBRE":138750000}},{"producto":"Aceite mezcla soya+palma","precioActual":8500.0,"precioNuevo":8000.0,"ahorroMensual":1500000.0,"reduccionPct":0.058823529411764705,"ahorroAnual":18000000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":150000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":2550000}},{"producto":"Filete de Bassa","precioActual":12000.0,"precioNuevo":10500.0,"ahorroMensual":1500000.0,"reduccionPct":0.125,"ahorroAnual":18000000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":150000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":1200000}},{"producto":"Pasta de tomate Bary","precioActual":18000.0,"precioNuevo":15528.0,"ahorroMensual":197760.0,"reduccionPct":0.13733333333333334,"ahorroAnual":2373120.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":177984},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":1296000}},{"producto":"Mostaza","precioActual":43400.0,"precioNuevo":39060.0,"ahorroMensual":434000.0,"reduccionPct":0.1,"ahorroAnual":5208000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":231466.66666666666},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":2314666.6666666665}},{"producto":"Solomo con cascara","precioActual":46250.0,"precioNuevo":29900.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Filete de pollo","precioActual":24500.0,"precioNuevo":23500.0,"ahorroMensual":390000.0,"reduccionPct":0.04081632653061224,"ahorroAnual":4680000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":182000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":4459000}},{"producto":"Sello de seguridad","precioActual":110.0,"precioNuevo":100.0,"ahorroMensual":200000.0,"reduccionPct":0.09090909090909091,"ahorroAnual":2400000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":180000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":1980000}},{"producto":"Rollo termico caja","precioActual":13458.0,"precioNuevo":11138.0,"ahorroMensual":580000.0,"reduccionPct":0.1723881706048447,"ahorroAnual":6960000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":154666.66666666666},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":897200}},{"producto":"Garbanzo X KG","precioActual":9340.0,"precioNuevo":6532.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Salmon 2-3","precioActual":39000.0,"precioNuevo":37000.0,"ahorroMensual":0.0,"reduccionPct":0.0,"ahorroAnual":0.0,"estado":"PENDIENTE","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":0}},{"producto":"Queso mozarella tajado 800grs","precioActual":35000.0,"precioNuevo":27000.0,"ahorroMensual":16000000.0,"reduccionPct":0.22857142857142856,"ahorroAnual":192000000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":6400000},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":28000000}},{"producto":"Mejillon chorito","precioActual":6480.0,"precioNuevo":5200.0,"ahorroMensual":256000.0,"reduccionPct":0.19753086419753085,"ahorroAnual":3072000.0,"estado":"EJECUTANDO","impactoMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":59733.333333333336},"baseMes":{"JULIO":0,"AGOSTO":0,"SEPTIEMBRE":302400}}],"sourceLabel":"AHORROS A SEPT.xlsx","refs":[{"ref":"MP0030","producto":"Pimienta negra","desde":"2026-09-29","estado":"EJECUTANDO","precioActual":46000,"precioNuevo":37222},{"ref":"MP0240","producto":"Cebolla en polvo","desde":"2026-09-29","estado":"EJECUTANDO","precioActual":18000,"precioNuevo":13000},{"ref":"MP0252","producto":"Snow Flake G2141","desde":"2026-09-02","estado":"EJECUTANDO","precioActual":17400,"precioNuevo":13800},{"ref":"MP0145","producto":"Carne molida cañón","desde":"2026-09-02","estado":"EJECUTANDO","precioActual":13500,"precioNuevo":12500},{"ref":"MP0112","producto":"Recorte de pechuga","desde":"2026-07-18","estado":"EJECUTANDO","precioActual":13000,"precioNuevo":12300},{"ref":"MP0102","producto":"Tilapia","desde":"2026-08-12","estado":"EJECUTANDO","precioActual":10500,"precioNuevo":9800},{"ref":"MP0059","producto":"Camarón 71/90 30% glaceo","desde":"2026-09-11","estado":"EJECUTANDO","precioActual":23500,"precioNuevo":19400},{"ref":"EE0033","producto":"Vinipel","desde":"2026-07-30","estado":"EJECUTANDO","precioActual":7300,"precioNuevo":6500},{"ref":"MP0069","producto":"Solomo redondo (actuales +1 nuevo)","desde":"2026-08-14","estado":"EJECUTANDO","precioActual":46250,"precioNuevo":45400},{"ref":"MP0069","producto":"Solomo redondo","desde":"2026-10-02","estado":"EJECUTANDO","precioActual":45400,"precioNuevo":43125},{"ref":"MP0002","producto":"Aceite mezcla soya+palma","desde":"2026-09-28","estado":"EJECUTANDO","precioActual":8500,"precioNuevo":8000},{"ref":"MP0063","producto":"Filete de Bassa","desde":"2026-09-28","estado":"EJECUTANDO","precioActual":12000,"precioNuevo":10500},{"ref":"MP0134","producto":"Pasta de tomate Bary","desde":"2026-09-03","estado":"EJECUTANDO","precioActual":18000,"precioNuevo":15528},{"ref":"MP0039","producto":"Mostaza","desde":"2026-09-15","estado":"EJECUTANDO","precioActual":43400,"precioNuevo":39060},{"ref":"MP0065","producto":"Filete de pollo","desde":"2026-09-17","estado":"EJECUTANDO","precioActual":24500,"precioNuevo":23500},{"ref":"EE0002","producto":"Sello de seguridad","desde":"2026-09-04","estado":"EJECUTANDO","precioActual":110,"precioNuevo":100},{"ref":"PP0054","producto":"Rollo termico caja","desde":"2026-09-23","estado":"EJECUTANDO","precioActual":13458,"precioNuevo":11138},{"ref":"MP0012","producto":"Garbanzo X KG","desde":"2026-10-16","estado":"EJECUTANDO","precioActual":9340,"precioNuevo":6532},{"ref":"MP0066","producto":"Salmon 1-2","desde":"2026-09-25","estado":"EJECUTANDO","precioActual":39000,"precioNuevo":38000},{"ref":"MP0245","producto":"Queso mozarella tajado 800grs","desde":"2026-09-19","estado":"EJECUTANDO","precioActual":35000,"precioNuevo":27000},{"ref":"MP0019","producto":"Mejillones negros X 454 GR","desde":"2026-09-24","estado":"EJECUTANDO","precioActual":6480,"precioNuevo":5200},{"ref":"MP0069","producto":"Solomo redondo (actual +1 nuevo)","desde":"2026-10-08","estado":"EJECUTANDO","precioActual":45600,"precioNuevo":42500},{"ref":"MP0223","producto":"Tahini alfresco 240 grs","desde":"2026-10-05","estado":"EJECUTANDO","precioActual":11391,"precioNuevo":10800},{"ref":"MP0037","producto":"Mayonesa Bary","desde":"2026-10-06","estado":"EJECUTANDO","precioActual":60800,"precioNuevo":54700},{"ref":"MP0250","producto":"Crema marinera maggi x 800 gr","desde":"2026-10-13","estado":"EJECUTANDO","precioActual":34890,"precioNuevo":34000}]};
 
 const NEG_ESTADO_CLS = {
   'EJECUTADO': 'estado-ejecutado', 'EJECUTANDO': 'estado-ejecutando',
@@ -3993,7 +4001,45 @@ function parseNegWorkbook(wb) {
   kpis.proyeccionAnual = totalRow ? safeNum(totalRow[5]) : (ahorroMensualTotal || 0) * 12;
   kpis.pctAhorroSobreCompraBase = totalRow ? safeNum(totalRow[4]) : null;
   negAttachImpactoMes(wb, productos, negNormMes, MESES_ES);
-  return { kpis, productos };
+  return { kpis, productos, refs: negLeerRefs(wb) };
+}
+
+// Hoja 'DETALLE': columnas "Referencia" (código Siesa) y "Fecha inicio nuevo precio". Con ellas el tablero
+// sabe qué bajas de precio vienen de una negociación: esa referencia, desde esa fecha.
+function negLeerRefs(wb) {
+  const ws = wb.Sheets['DETALLE'];
+  if (!ws) return [];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+  const norm = x => String(x == null ? '' : x).replace(/\s+/g, ' ').trim().toUpperCase();
+  const head = (rows[0] || []).map(norm);
+  const col = pref => head.findIndex(h => h.indexOf(pref) === 0);
+  const cP = col('PRODUCTO'), cRef = col('REFERENCIA'), cF = col('FECHA INICIO'), cE = col('ESTADO'), cA = col('PRECIO ACTUAL'), cN = col('PRECIO NUEVO');
+  if (cRef < 0 || cF < 0) return [];
+  const fecha = v => {
+    if (v instanceof Date) return v.toISOString().slice(0, 10);
+    if (typeof v === 'number' && v > 20000) return new Date(Math.round((v - 25569) * 864e5)).toISOString().slice(0, 10);
+    const m = String(v || '').match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+    return m ? m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0') : null;
+  };
+  const out = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i] || [];
+    const ref = norm(r[cRef]), desde = fecha(r[cF]);
+    if (!r[cP] || !ref || !desde) continue;
+    out.push({ ref, producto: String(r[cP]).trim(), desde, estado: cE >= 0 && r[cE] ? norm(r[cE]) : 'SIN ESTADO',
+      precioActual: cA >= 0 ? safeNum(r[cA]) : null, precioNuevo: cN >= 0 ? safeNum(r[cN]) : null });
+  }
+  return out;
+}
+// Referencias con precio negociado vigente en el mes (AAAA-MM): estado EJECUTANDO / EJECUTADO y fecha de inicio
+// hasta ese mes. Devuelve ref -> [negociaciones].
+function negRefsDelMes(mes) {
+  const out = {};
+  (NEG_DATA.refs || []).forEach(n => {
+    if (!/^EJECUTAD|^EJECUTANDO/.test(n.estado) || n.desde.slice(0, 7) > mes) return;
+    (out[n.ref] = out[n.ref] || []).push(n);
+  });
+  return out;
 }
 
 // Hoja 'DETALLE': columnas "Impacto <mes> $" y "Base <mes> $" por producto. Son las que suman
@@ -4030,6 +4076,7 @@ function negAttachImpactoMes(wb, productos, negNormMes, MESES_ES) {
 // Datos guardados antes de existir el filtro por mes no traen impactoMes: se completan con los
 // del archivo embebido (mismo producto), para no obligar a volver a subir el Excel.
 function negKeepImpactoMes(nuevo, previo) {
+  if (nuevo && !nuevo.refs && previo && previo.refs) nuevo.refs = previo.refs;
   if (!nuevo || !nuevo.productos || nuevo.productos.some(p => p.impactoMes) || !previo || !previo.productos) return nuevo;
   const k = s => String(s || '').trim().toUpperCase();
   const map = {}; previo.productos.forEach(p => { if (p.impactoMes) map[k(p.producto)] = p; });
@@ -4051,7 +4098,7 @@ function handleNegFileUpload(ev) {
       const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
       const parsed = parseNegWorkbook(wb);
       if (!parsed.productos.length) { alert('No se encontraron productos en la hoja "RESUMEN" del archivo.'); return; }
-      NEG_DATA = { kpis: parsed.kpis, productos: parsed.productos, sourceLabel: file.name };
+      NEG_DATA = { kpis: parsed.kpis, productos: parsed.productos, refs: parsed.refs, sourceLabel: file.name };
       document.getElementById('neg-file-name').textContent = '✅ ' + file.name;
       populateNegFilters();
       renderNegociacionesTab();
@@ -4195,13 +4242,14 @@ function renderNegImpacto() {
   kpis.innerHTML =
     totCard('var(--wine)', 'Total compras de ' + mesLargoLbl(d.mes), fmtPesos(d.compras), 'valor neto de todas las facturas del mes') +
     totCard('#15803D', 'Ahorro por negociaciones', d.neg != null ? fmtPesos(d.neg) : '—', d.neg != null ? pc(d.neg) : 'el Excel de Ahorros no trae este mes') +
-    totCard('#16A34A', 'Ahorro por bajas de precio', t ? fmtPesos(t.baja) : '—', t ? pc(t.baja) + ' · ' + t.nBaja + ' ítems' : 'sin comparación de precios') +
+    totCard('#16A34A', '🌦 Bajas de precio por temporada / mercado', t ? fmtPesos(t.bajaMerc) : '—', t ? pc(t.bajaMerc) + ' · ' + t.nBajaMerc + ' ítems sin negociación' : 'sin comparación de precios') +
     totCard('#DC2626', 'Alzas de precio / inflación', t ? fmtPesos(t.alza) : '—', t ? pc(t.alza) + ' · ' + t.nAlza + ' ítems' : 'sin comparación de precios') +
     totCard(neto == null ? 'var(--wine)' : neto >= 0 ? '#16A34A' : '#DC2626', 'Efecto neto de precios', neto == null ? '—' : (neto >= 0 ? 'Ahorro ' : 'Sobrecosto ') + fmtPesos(neto),
       neto == null ? '' : pc(Math.abs(neto)) + ' (bajas − alzas)');
-  note.textContent = 'ⓘ Bajas y alzas de precio: lo pagado en el mes frente a lo que hubiera costado al precio promedio de los 3 meses anteriores, '
-    + 'por proveedor e ítem (mismo cálculo de la pestaña Precio Unitario). El ahorro por negociaciones viene del Excel de Ahorros; '
-    + 'parte de ese ahorro ya se ve reflejado como baja de precio, por eso no se suman.';
+  note.textContent = 'ⓘ El ahorro por negociaciones viene del Excel de Ahorros. Las bajas por temporada / mercado y las alzas comparan lo pagado '
+    + 'en el mes con lo que hubiera costado al precio promedio de los 3 meses anteriores, por proveedor e ítem (mismo cálculo de Precio Unitario); '
+    + 'de las bajas se excluyen las referencias con precio negociado vigente (columnas Referencia y Fecha inicio del Excel de Ahorros), '
+    + 'para no contar dos veces el mismo ahorro.';
 
   const ult = datos.slice(-12);
   const pct = (v, x) => v != null && x.compras ? +(v / x.compras * 100).toFixed(2) : null;
@@ -4212,7 +4260,7 @@ function renderNegImpacto() {
       labels: ult.map(x => mesCortoLbl(x.mes)),
       datasets: [
         { label: 'Ahorro por negociaciones', data: ult.map(x => pct(x.neg, x)), backgroundColor: '#15803D', borderRadius: 4, _v: ult.map(x => x.neg) },
-        { label: 'Ahorro por bajas de precio', data: ult.map(x => x.t ? pct(x.t.baja, x) : null), backgroundColor: '#86EFAC', borderRadius: 4, _v: ult.map(x => x.t && x.t.baja) },
+        { label: 'Bajas por temporada / mercado', data: ult.map(x => x.t ? pct(x.t.bajaMerc, x) : null), backgroundColor: '#86EFAC', borderRadius: 4, _v: ult.map(x => x.t && x.t.bajaMerc) },
         { label: 'Alzas de precio / inflación', data: ult.map(x => x.t ? pct(x.t.alza, x) : null), backgroundColor: '#DC2626', borderRadius: 4, _v: ult.map(x => x.t && x.t.alza) }
       ]
     },
@@ -6488,7 +6536,7 @@ async function actualizarPublicar(silent) {
     try {
       const parsed = parseNegWorkbook(actualizarTemp['ahorros'].wb);
       if (parsed.productos.length) {
-        NEG_DATA = { kpis: parsed.kpis, productos: parsed.productos, sourceLabel: actualizarTemp['ahorros'].filename };
+        NEG_DATA = { kpis: parsed.kpis, productos: parsed.productos, refs: parsed.refs, sourceLabel: actualizarTemp['ahorros'].filename };
         actualizarSafeSave('montolivo_neg_data', NEG_DATA, 'Negociaciones (Ahorros)');
         negHistMerge(parsed.kpis.meses); // guarda estos meses en el histórico aunque no se visite la pestaña Negociaciones
         populateNegFilters();
