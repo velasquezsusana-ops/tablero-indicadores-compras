@@ -3869,18 +3869,22 @@ function renderPreciosTab() {
   } else {
     const maxUp = withVar.reduce((a,b) => b.variacionPct > a.variacionPct ? b : a, withVar[0]);
     const maxDown = withVar.reduce((a,b) => b.variacionPct < a.variacionPct ? b : a, withVar[0]);
-    const primeroVal = arr => arr.find(p => p != null);
-    const ultimoVal = arr => [...arr].reverse().find(p => p != null);
+    // El % es el precio del mes elegido frente al PROMEDIO de los meses anteriores (igual que la columna Variación),
+    // así que el texto muestra esos dos valores para que la cuenta dé.
+    const antTxt = r => { const ant = r.precios.slice(0, -1).filter(p => p != null);
+      const lbls = lbl4.slice(0, -1).filter((_, i) => r.precios[i] != null);
+      return 'Promedio ' + lbls.join(', ') + ': $' + fmtPrecio(Math.round(ant.reduce((a, v) => a + v, 0) / ant.length * 100) / 100); };
+    const desc = r => '<strong>' + r.item + '</strong> — ' + r.proveedor + '<br>' + antTxt(r) + ' → ' + lblMes + ': $' + fmtPrecio(r.precios[r.precios.length - 1]) + ' por ' + r.um;
     grid.innerHTML = `
       <div class="alert-card" style="--accent-left:#DC2626">
         <div class="a-label">Mayor incremento de precio unitario</div>
         <div class="a-value" style="color:#DC2626">▲ ${maxUp.variacionPct}%</div>
-        <div class="a-desc"><strong>${maxUp.item}</strong> — ${maxUp.proveedor}<br>De $${fmtPrecio(primeroVal(maxUp.precios))} a $${fmtPrecio(ultimoVal(maxUp.precios))} por ${maxUp.um}</div>
+        <div class="a-desc">${desc(maxUp)}</div>
       </div>
       <div class="alert-card" style="--accent-left:#16A34A">
         <div class="a-label">Mayor caída de precio unitario</div>
         <div class="a-value" style="color:#16A34A">▼ ${Math.abs(maxDown.variacionPct)}%</div>
-        <div class="a-desc"><strong>${maxDown.item}</strong> — ${maxDown.proveedor}<br>De $${fmtPrecio(primeroVal(maxDown.precios))} a $${fmtPrecio(ultimoVal(maxDown.precios))} por ${maxDown.um}</div>
+        <div class="a-desc">${desc(maxDown)}</div>
       </div>`;
   }
 }
