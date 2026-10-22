@@ -4021,7 +4021,50 @@ function parseNegWorkbook(wb) {
   kpis.proyeccionAnual = totalRow ? safeNum(totalRow[5]) : (ahorroMensualTotal || 0) * 12;
   kpis.pctAhorroSobreCompraBase = totalRow ? safeNum(totalRow[4]) : null;
   negAttachImpactoMes(wb, productos, negNormMes, MESES_ES);
-  return { kpis, productos, refs: negLeerRefs(wb) };
+  // Si la hoja DETALLE trae la lista completa, se usa esa (una fila por negociación, con su impacto por mes):
+  // así el detalle suma lo mismo que las tarjetas de cada mes del RESUMEN.
+  const delDetalle = negProductosDetalle(wb, negNormMes, MESES_ES);
+  return { kpis, productos: delDetalle && delDetalle.length ? delDetalle : productos, refs: negLeerRefs(wb) };
+}
+
+function negProductosDetalle(wb, negNormMes, MESES_ES) {
+  const ws = wb.Sheets['DETALLE'];
+  if (!ws) return null;
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+  const head = (rows[0] || []).map(h => negNormMes(h).replace(/\s+/g, ' '));
+  const col = pref => head.findIndex(h => h.indexOf(pref) === 0);
+  const cP = col('PRODUCTO'), cA = col('PRECIO ACTUAL'), cN = col('PRECIO NUEVO'), cM = col('AHORRO MENSUAL'),
+    cPct = col('AHORRO %'), cAn = col('AHORRO ANUAL'), cE = col('ESTADO'), cProv = col('PROVEEDOR');
+  if (cP < 0 || cA < 0 || cN < 0) return null;
+  const mesCols = [];
+  head.forEach((h, c) => {
+    const m = h.match(/^(IMPACTO|BASE)\s+([A-Z]+)/);
+    if (m && MESES_ES.includes(m[2])) mesCols.push({ c, tipo: m[1] === 'IMPACTO' ? 'impactoMes' : 'baseMes', mes: m[2] });
+  });
+  const out = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i] || [];
+    const prod = r[cP];
+    if (prod == null || String(prod).trim() === '') continue;
+    if (String(prod).trim().toUpperCase() === 'TOTAL') break;
+    if (safeNum(r[cA]) == null && safeNum(r[cN]) == null) continue; // filas sin negociación aún (solo el nombre)
+    const est = cE >= 0 ? r[cE] : null;
+    const p = {
+      producto: String(prod).trim(), proveedor: cProv >= 0 && r[cProv] ? String(r[cProv]).trim() : '',
+      precioActual: safeNum(r[cA]), precioNuevo: safeNum(r[cN]),
+      ahorroMensual: cM >= 0 ? safeNum(r[cM]) : null, reduccionPct: cPct >= 0 ? safeNum(r[cPct]) : null,
+      ahorroAnual: cAn >= 0 ? safeNum(r[cAn]) : null,
+      estado: est == null || est === 0 || est === '0' || String(est).trim() === '' ? 'SIN ESTADO' : String(est).trim().toUpperCase(),
+      impactoMes: {}, baseMes: {}
+    };
+    mesCols.forEach(k => { p[k.tipo][k.mes] = safeNum(r[k.c]) || 0; });
+    out.push(p);
+  }
+  // Mismo nombre en dos filas (ej. dos negociaciones de solomo): se distinguen con el proveedor.
+  const cuenta = {};
+  out.forEach(p => { cuenta[p.producto] = (cuenta[p.producto] || 0) + 1; });
+  out.forEach(p => { if (cuenta[p.producto] > 1 && p.proveedor) p.producto += ' · ' + p.proveedor; });
+  return out;
 }
 
 // Hoja 'DETALLE': columnas "Referencia" (código Siesa) y "Fecha inicio nuevo precio". Con ellas el tablero
