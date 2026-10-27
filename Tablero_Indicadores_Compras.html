@@ -1266,7 +1266,7 @@ footer strong { color: rgba(255,255,255,0.8); }
         <div class="card-sub">Cuánto nos ahorramos (negociaciones y bajas de precio) frente a cuánto pagamos de más por alzas de precio o inflación</div>
       </div>
       <div style="display:flex; align-items:center; gap:.5rem"><span class="filter-label" style="margin:0">Mes</span>
-        <select id="neg-imp-mes" class="filter-select" onchange="renderNegImpacto()"></select></div>
+        <select id="neg-imp-mes" class="filter-select" onchange="renderNegociacionesTab()"></select></div>
     </div>
     <div class="tot-grid" id="neg-imp-kpis" style="margin-top:1rem"></div>
     <div class="chart-wrap" style="height:300px"><canvas id="ch-neg-impacto"></canvas></div>
@@ -4207,9 +4207,13 @@ function negKeepImpactoMes(nuevo, previo) {
   return nuevo;
 }
 
+// El mes de la pestaña lo manda el selector "Mes" de "Ahorro vs. alzas" (y con él se filtra el detalle y la participación).
+// Si se cambia el filtro de Mes de arriba, el selector se pone en el último mes escogido allí.
+let NEG_FILTRO_GLOBAL_VISTO = '';
 function negMesesFiltro() {
   const NOM = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-  return [...new Set((filterMeses || []).map(m => NOM[(+String(m).split('-')[1]) - 1]).filter(Boolean))];
+  const mes = NEG_IMP_MES || (document.getElementById('neg-imp-mes') || {}).value;
+  return mes ? [NOM[(+String(mes).split('-')[1]) - 1]].filter(Boolean) : [];
 }
 
 function handleNegFileUpload(ev) {
@@ -4397,6 +4401,11 @@ function renderNegImpacto() {
 function renderNegociacionesTab() {
   document.getElementById('neg-source-info').textContent = 'Fuente: ' + NEG_DATA.sourceLabel;
   renderNegResumenMensual();
+  const glob = (filterMeses || []).slice().sort().join(',');
+  if (glob !== NEG_FILTRO_GLOBAL_VISTO) {
+    NEG_FILTRO_GLOBAL_VISTO = glob;
+    if (glob) { NEG_IMP_MES = glob.split(',').pop(); const sel = document.getElementById('neg-imp-mes'); if (sel) sel.innerHTML = ''; }
+  }
   renderNegImpacto();
   const fProd = document.getElementById('neg-f-producto').value;
   const fEst = document.getElementById('neg-f-estado').value;
@@ -4404,8 +4413,8 @@ function renderNegociacionesTab() {
   if (fProd) rows = rows.filter(p => p.producto === fProd);
   if (fEst) rows = rows.filter(p => p.estado === fEst);
 
-  // Filtro global de Mes: si hay meses escogidos (y el Excel trae la hoja DETALLE), el ahorro de
-  // cada producto pasa a ser su impacto en esos meses, y solo quedan los productos con ahorro en ellos.
+  // Mes elegido en la pestaña: si el Excel trae la hoja DETALLE, el ahorro de cada producto pasa a ser
+  // su impacto en ese mes, y solo quedan los productos con ahorro en él.
   const mesesSel = negMesesFiltro();
   const porMes = mesesSel.length > 0 && NEG_DATA.productos.some(p => p.impactoMes);
   const mesesTxt = mesesSel.map(m => m.charAt(0) + m.slice(1).toLowerCase()).join(' + ');
