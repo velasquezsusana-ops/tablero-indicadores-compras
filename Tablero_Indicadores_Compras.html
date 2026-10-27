@@ -3662,13 +3662,34 @@ function preciosAlzaEn(x, j) {
 }
 // Compara el precio homologado del mes elegido con el promedio de los 3 meses anteriores, por proveedor + ítem
 // (mismas reglas de siempre: la combinación aparece si tiene precio en al menos 2 de los 4 meses).
+// Une las series del mismo proveedor + referencia (un producto renombrado en Siesa, ej. "PAN MENU PAQ X 25 UNID" -> "PAN MENU",
+// sigue siendo el mismo). Se muestra el nombre del mes más reciente con compra.
+let PRECIOS_PARES_CACHE = { src: null, out: null };
+function preciosParesPorRef() {
+  const src = PRICE_DATA.pares || [];
+  if (PRECIOS_PARES_CACHE.src === src) return PRECIOS_PARES_CACHE.out;
+  const ult = x => { for (let j = x.b.length - 1; j >= 0; j--) if (x.b[j] > 0) return j; return -1; };
+  const grupos = {}, out = [];
+  src.forEach(x => {
+    const r = String(x.r || '').trim();
+    if (!r) { out.push(x); return; }
+    const k = x.p + '' + r + '' + x.u;
+    const g = grupos[k];
+    if (!g) { grupos[k] = Object.assign({}, x, { b: x.b.slice(), q: x.q.slice() }); out.push(grupos[k]); return; }
+    if (ult(x) > ult(g)) g.i = x.i;
+    x.b.forEach((v, j) => { g.b[j] = (g.b[j] || 0) + (v || 0); });
+    x.q.forEach((v, j) => { g.q[j] = Math.round(((g.q[j] || 0) + (v || 0)) * 100) / 100; });
+  });
+  PRECIOS_PARES_CACHE = { src, out };
+  return out;
+}
 function preciosCompararMes(mes) {
   const MA = PRICE_DATA.months || [], k = MA.indexOf(mes);
   if (!PRICE_DATA.pares || k < 1) return null;
   const idx = []; for (let j = Math.max(0, k - 3); j <= k; j++) idx.push(j);
   const rows = [];
   const negRefs = negRefsDelMes(mes);
-  PRICE_DATA.pares.forEach(x => {
+  preciosParesPorRef().forEach(x => {
     const precios = idx.map(j => x.q[j] > 0 && x.b[j] > 0 ? Math.round(x.b[j] / x.q[j] * 100) / 100 : null);
     if (precios.filter(v => v != null).length < 2) return;
     const actual = precios[precios.length - 1];
@@ -5499,7 +5520,7 @@ function actualizarParsePrecios(wbXlsb, histRows, prevPriceData) {
 
   // 2) Precio homologado por (proveedor,item), últimos 4 meses, desde Histórico de compras
   // (se homologan TODOS los meses del período: el tablero deja elegir cualquier mes y lo compara con sus 3 anteriores)
-  const pairTotalRecent = {}, pairRef = {}, rawHomologRows = {}, pairName = {};
+  const pairTotalRecent = {}, pairRef = {}, rawHomologRows = {}, pairName = {}, pairNameMes = {};
   histRows.forEach(r => {
     const fecha = actualizarParseDate(r['Fecha']);
     if (!fecha) return;
@@ -5512,10 +5533,11 @@ function actualizarParsePrecios(wbXlsb, histRows, prevPriceData) {
     const bruto = Number(r['Valor bruto local']) || 0;
     const um = String(r['U.M.'] || '').trim();
     if (!prov || !item || cant === 0) return;
-    const key = prov + '' + item;
+    // Por referencia (si la trae): así un producto renombrado en Siesa sigue siendo el mismo. Se muestra su nombre más reciente.
+    const key = prov + '' + (ref ? 'REF:' + ref : item);
     if (last4.includes(keyMonth)) pairTotalRecent[key] = (pairTotalRecent[key] || 0) + bruto;
     pairRef[key] = ref;
-    pairName[key] = [prov, item];
+    if (!pairNameMes[key] || keyMonth >= pairNameMes[key]) { pairName[key] = [prov, item]; pairNameMes[key] = keyMonth; }
     let qtyBase = null, baseUnit = null;
     const info = factorLookup[ref + '|' + um];
     if (info) { baseUnit = info[1]; qtyBase = cant * info[0]; }
@@ -5542,7 +5564,7 @@ function actualizarParsePrecios(wbXlsb, histRows, prevPriceData) {
 
   const pairsOut = [];
   Object.entries(pairMonthBrutoH).forEach(([key, monthmap]) => {
-    const [prov, item] = key.split('');
+    const [prov, item] = pairName[key];
     const monthsWithData = last4.filter(m => (monthmap[m] || 0) > 0 && (pairMonthCantH[key][m] || 0) > 0);
     if (monthsWithData.length < 2) return;
     const baseUnit = pairBaseUnit[key];
