@@ -3721,7 +3721,7 @@ function preciosCompararMes(mes) {
 // Totales del mes: sobrecosto por alzas (+), ahorro por bajas (−) y neto, sobre las combinaciones comparables.
 // Si el precio del mes se movió menos de 0,5% frente al promedio, se toma como precio igual (redondeos, centavos).
 const PRECIOS_UMBRAL_CAMBIO = 0.005;
-// Sobrecostos que se destacan (tarjeta roja y rojo en la tabla): de $600.000 en adelante. Los menores igual cuentan en el neto.
+// Sobrecostos grandes (de $600.000 en adelante): se mencionan aparte dentro de la tarjeta roja, que muestra el total de todas las alzas.
 const PRECIOS_SOBRECOSTO_MIN = 600000;
 const preciosCambio = r => r.sobrecostoAhorro == null || r.pctVarVsProm3M == null || Math.abs(r.pctVarVsProm3M) < PRECIOS_UMBRAL_CAMBIO ? 0 : Math.sign(r.sobrecostoAhorro);
 function preciosTotales(rows) {
@@ -3791,8 +3791,8 @@ function preciosRenderCabecera(cmp, rows) {
   const sg = v => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtPesos(v);
   const filtrado = filterProvs.length || filterItems.length;
   tot.innerHTML =
-    totCard('#DC2626', 'Sobrecostos de $600 mil o más · ' + mesTxt, '+' + fmtPesos(t.alzaGrande), hist(x => '+' + fmtPesos(x.alzaGrande), '#DC2626') + t.nAlzaGrande + ' combinaciones · ' + pct(t.alzaGrande)
-      + (t.nAlza > t.nAlzaGrande ? '<div style="margin-top:.25rem">Otras ' + (t.nAlza - t.nAlzaGrande) + ' alzas menores suman +' + fmtPesos(t.alza - t.alzaGrande) + ' (sí cuentan en el neto)</div>' : '')) +
+    totCard('#DC2626', 'Sobrecosto por alzas de precio · ' + mesTxt, '+' + fmtPesos(t.alza), hist(x => '+' + fmtPesos(x.alza), '#DC2626') + t.nAlza + ' combinaciones subieron · ' + pct(t.alza)
+      + (t.nAlzaGrande ? '<div style="margin-top:.25rem">De estas, ' + t.nAlzaGrande + ' de $600 mil o más suman +' + fmtPesos(t.alzaGrande) + '</div>' : '')) +
     totCard('#15803D', '🤝 Ahorro por negociación · ' + mesTxt, t.neg != null ? '−' + fmtPesos(t.neg) : '—', hist(x => x.neg != null ? '−' + fmtPesos(x.neg) : '—', '#15803D')
       + (t.neg != null ? 'Del Excel de Ahorros (Impacto del mes) · ' + pct(t.neg) + (filtrado ? ' · no cambia con los filtros' : '') : 'el Excel de Ahorros no trae este mes')) +
     totCard('#16A34A', '🌦 Ahorro por temporada / mercado · ' + mesTxt, '−' + fmtPesos(t.bajaMerc), hist(x => '−' + fmtPesos(x.bajaMerc), '#16A34A') + t.nBajaMerc + ' combinaciones bajaron sin negociación · ' + pct(t.bajaMerc)) +
@@ -3869,7 +3869,7 @@ function renderPreciosTab() {
       const gastoAD = r.gastoPrecioProm3M == null ? '–' : '$'+r.gastoPrecioProm3M.toLocaleString('es-CO', {maximumFractionDigits:0});
       const ae = r.sobrecostoAhorro;
       const aeC = preciosCambio(r);
-      const aeCls = ae == null ? '' : aeC > 0 ? (ae >= PRECIOS_SOBRECOSTO_MIN ? 'var-up' : 'var-flat') : aeC < 0 ? 'var-down' : 'var-flat';
+      const aeCls = ae == null ? '' : aeC > 0 ? 'var-up' : aeC < 0 ? 'var-down' : 'var-flat';
       const aeTxt = ae == null ? '–' : aeC === 0 ? '<span title="El precio se movió menos de 0,5%: se toma como precio igual">$0</span>'
         : (ae > 0 ? '+$' : '−$') + Math.abs(ae).toLocaleString('es-CO', {maximumFractionDigits:0});
       return `<tr${isActiveRow ? ' class="is-active"' : ''}>
