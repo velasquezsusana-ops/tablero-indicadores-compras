@@ -3689,8 +3689,7 @@ function preciosCompararMes(mes) {
   const idx = []; for (let j = Math.max(0, k - 3); j <= k; j++) idx.push(j);
   const rows = [];
   const negRefs = negRefsDelMes(mes);
-  const provsRef = {};
-  preciosParesPorRef().forEach(x => { const r = String(x.r || '').trim().toUpperCase(); (provsRef[r] = provsRef[r] || []).push(x.p); });
+  const provsTodos = [...new Set(preciosParesPorRef().map(x => x.p))];
   preciosParesPorRef().forEach(x => {
     const precios = idx.map(j => x.q[j] > 0 && x.b[j] > 0 ? Math.round(x.b[j] / x.q[j] * 100) / 100 : null);
     if (precios.filter(v => v != null).length < 2) return;
@@ -3705,7 +3704,7 @@ function preciosCompararMes(mes) {
     for (let j = k; j >= 1 && preciosAlzaEn(x, j); j--) mesesSub.unshift(MA[j]);
     rows.push({
       mesesSubiendo: mesesSub.length, mesesSubiendoLista: mesesSub,
-      negociacion: negParaProveedor(negRefs[String(x.r || '').trim().toUpperCase()], x.p, provsRef[String(x.r || '').trim().toUpperCase()] || []),
+      negociacion: negParaProveedor(negRefs[String(x.r || '').trim().toUpperCase()], x.p, provsTodos),
       proveedor: x.p, item: x.i, referencia: x.r, um: x.u, precios,
       variacionPct: actual != null && prom ? Math.round((actual - prom) / prom * 1000) / 10 : null,
       pctVarVsProm3M: actual != null && prom ? (actual - prom) / prom : null,
@@ -4132,7 +4131,7 @@ function negLeerRefs(wb) {
   return out;
 }
 // "Proveedor usado" del Excel de Ahorros es texto libre: se compara sin tildes/espacios/puntuación, admite varios
-// separados por / - , y "Todos". Si no coincide con ningún proveedor que haya vendido esa referencia, aplica a todos.
+// separados por / - , y "Todos". Si no coincide con ningún proveedor del tablero (ej. "Pollocoa"), aplica a todos los de esa referencia.
 function negProvCoincide(txt, razon) {
   const comp = x => String(x || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
   const R = comp(razon).replace(/ /g, '');
@@ -4144,10 +4143,10 @@ function negProvCoincide(txt, razon) {
     return t.length > 0 && t.every(w => R.includes(w));
   });
 }
-function negParaProveedor(negs, prov, provsDeRef) {
+function negParaProveedor(negs, prov, provsTodos) {
   if (!negs) return null;
   const out = negs.filter(n => !n.proveedor || negProvCoincide(n.proveedor, prov)
-    || !provsDeRef.some(p => negProvCoincide(n.proveedor, p)));
+    || !provsTodos.some(p => negProvCoincide(n.proveedor, p)));
   return out.length ? out : null;
 }
 // Referencias con precio negociado vigente en el mes (AAAA-MM): estado EJECUTANDO / EJECUTADO y fecha de inicio
