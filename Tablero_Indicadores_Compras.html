@@ -3689,7 +3689,8 @@ function preciosCompararMes(mes) {
   const idx = []; for (let j = Math.max(0, k - 3); j <= k; j++) idx.push(j);
   const rows = [];
   const negRefs = negRefsDelMes(mes);
-  const provsTodos = [...new Set(preciosParesPorRef().map(x => x.p))];
+  // Todos los proveedores del Histórico (no solo los comparables), para saber si el del Excel existe aunque sea nuevo en esa referencia.
+  const provsTodos = [...new Set(preciosParesPorRef().map(x => x.p).concat(((HIST_PROV_ITEM && HIST_PROV_ITEM.porProveedor) || []).map(p => p.name)))];
   preciosParesPorRef().forEach(x => {
     const precios = idx.map(j => x.q[j] > 0 && x.b[j] > 0 ? Math.round(x.b[j] / x.q[j] * 100) / 100 : null);
     if (precios.filter(v => v != null).length < 2) return;
