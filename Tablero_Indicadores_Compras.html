@@ -1251,11 +1251,11 @@ footer strong { color: rgba(255,255,255,0.8); }
   </div>
 
   <div class="chart-card" style="margin-top:1.5rem">
-    <div class="card-title">¿De dónde sale el ahorro? — <span id="pitem-ahorro-mes">–</span></div>
-    <div class="card-sub">Detalle de cada valor del resultado neto. Los totales son los mismos de la pestaña Negociaciones ("Ahorro vs. alzas de precio").</div>
+    <div class="card-title">¿Qué se negoció? — <span id="pitem-ahorro-mes">–</span></div>
+    <div class="card-sub">Productos con precio negociado y su ahorro en el mes (Excel de Ahorros, columna "Impacto" del mes). El total es el mismo de la pestaña Negociaciones.</div>
     <div style="overflow: auto">
       <table class="data-table" id="pitem-ahorro-table">
-        <thead><tr><th>Concepto / Producto</th><th>Proveedor(es)</th><th class="num">Valor</th></tr></thead>
+        <thead><tr><th>Producto</th><th>Proveedor</th><th class="num">Precio antes</th><th class="num">Precio negociado</th><th class="num">Ahorro del mes</th></tr></thead>
         <tbody id="pitem-ahorro-tbody"></tbody>
       </table>
     </div>
@@ -4475,16 +4475,12 @@ function renderPrecioItemTab() {
   const NOM = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
   const mesNom = NOM[+PITEM_MES.split('-')[1] - 1];
   const prodNeg = (NEG_DATA.productos || []).map(p => ({ p, v: (p.impactoMes || {})[mesNom] || 0 })).filter(x => x.v).sort((x, y) => y.v - x.v);
-  const temp = items.filter(a => a.bajaMerc > 0.5).sort((x, y) => y.bajaMerc - x.bajaMerc);
-  const alz = items.filter(a => a.alza > 0.5).sort((x, y) => y.alza - x.alza);
-  const provTxt = l => { const u = [...new Set(l)]; return u.length > 2 ? u.slice(0, 2).join(', ') + ' y ' + (u.length - 2) + ' más' : u.join(', '); };
-  const grupo = (titulo, color, total, filas, signo) => `<tr style="background:var(--wine-ghost)"><td colspan="2" style="font-weight:700;color:${color}">${titulo}</td><td class="num" style="font-weight:700;color:${color}">${signo}${fmtPesos(total)}</td></tr>`
-    + filas.map(f => `<tr><td style="padding-left:1.5rem">${f[0]}</td><td style="color:var(--text-muted);font-size:.78rem">${f[1]}</td><td class="num" style="color:${color}">${signo}${fmtPesos(f[2])}</td></tr>`).join('');
-  document.getElementById('pitem-ahorro-tbody').innerHTML =
-    grupo('🤝 Ahorro por negociaciones (Excel de Ahorros, "Impacto ' + mesNom.toLowerCase() + '")', '#15803D', neg || 0, prodNeg.map(x => [x.p.producto, x.p.proveedor || '', x.v]), '−')
-    + grupo('🌦 Bajas de precio por temporada / mercado (sin negociación)', '#16A34A', t.bajaMerc, temp.map(a => [a.item, provTxt(a.provs), a.bajaMerc]), '−')
-    + grupo('🔺 Alzas de precio (se restan)', '#DC2626', t.alza, alz.map(a => [a.item, provTxt(a.provs), a.alza]), '+')
-    + `<tr style="font-weight:800;border-top:2px solid var(--wine)"><td colspan="2">RESULTADO NETO: ${neto >= 0 ? 'AHORRO' : 'SOBRECOSTO'} (negociaciones + temporada − alzas)</td><td class="num" style="color:${neto >= 0 ? '#16A34A' : '#DC2626'}">${neto >= 0 ? '−' : '+'}${fmtPesos(neto)}</td></tr>`;
+  const $$ = v => v == null ? '–' : '$' + Math.round(v).toLocaleString('es-CO');
+  const totNeg = prodNeg.reduce((a, x) => a + x.v, 0);
+  document.getElementById('pitem-ahorro-tbody').innerHTML = prodNeg.length
+    ? prodNeg.map(x => `<tr><td>${x.p.producto}</td><td style="color:var(--text-muted)">${x.p.proveedor || ''}</td><td class="num">${$$(x.p.precioActual)}</td><td class="num">${$$(x.p.precioNuevo)}</td><td class="num var-down">${$$(x.v)}</td></tr>`).join('')
+      + `<tr style="font-weight:800;background:var(--wine-ghost)"><td colspan="4">TOTAL AHORRO POR NEGOCIACIÓN · ${mesTxt}</td><td class="num var-down">${$$(neg != null ? neg : totNeg)}</td></tr>`
+    : '<tr><td colspan="5" style="text-align:center;color:var(--text-light);padding:1.5rem">El Excel de Ahorros no trae ahorro por negociación para este mes.</td></tr>';
 }
 
 function negAhorroPorMes() {
