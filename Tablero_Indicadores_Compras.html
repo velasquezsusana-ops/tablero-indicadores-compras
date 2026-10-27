@@ -573,6 +573,7 @@ footer strong { color: rgba(255,255,255,0.8); }
   <button class="sec-tab" onclick="setTab('beneficios',this)" role="tab">🏅 Beneficios Proveedor</button>
   <button class="sec-tab" onclick="setTab('distribucion',this)" role="tab">📍 Distribución</button>
   <button class="sec-tab" onclick="setTab('precios',this)" role="tab">💲 Precio Unitario</button>
+  <button class="sec-tab" onclick="setTab('precio-item',this)" role="tab">🏷️ Precio por Ítem</button>
   <button class="sec-tab" onclick="setTab('negociaciones',this)" role="tab">🤝 Negociaciones</button>
   <button class="sec-tab" onclick="setTab('hist-oc',this)" role="tab">📋 Órdenes Completas</button>
   <button class="sec-tab" onclick="setTab('det-oc',this)" role="tab">📊 Detalle OC</button>
@@ -1225,6 +1226,39 @@ footer strong { color: rgba(255,255,255,0.8); }
     <div class="card-title">Impacto de Sobrecosto (+) / Ahorro (−) — Top 10 por Referencia (columna AE)</div>
     <div class="card-sub">Diferencia entre el gasto real del mes actual y lo que hubiera costado al precio promedio de los 3 meses previos</div>
     <div class="chart-wrap" style="height:340px"><canvas id="ch-sobrecosto-ahorro"></canvas></div>
+  </div>
+</section>
+
+<!-- ══ TAB PRECIO POR ÍTEM ══ -->
+<section id="tab-precio-item" class="tab-panel">
+  <h2 class="section-title">Variación de Precio Unitario por Ítem (todos los proveedores)</h2>
+  <div class="mes-picker">
+    <span class="filter-label" style="margin:0">Mes a analizar</span>
+    <select id="pitem-mes" class="filter-select" onchange="PITEM_MES = this.value; renderPrecioItemTab()"></select>
+    <span id="pitem-mes-txt"></span>
+  </div>
+  <div class="tot-grid" id="pitem-totales"></div>
+  <div class="chart-card">
+    <div class="card-title">Precio Unitario por Ítem — Mes elegido y 3 meses anteriores (<span id="pitem-count">–</span> ítems)</div>
+    <div class="card-sub">Mismo cálculo de la pestaña Precio Unitario, sumando todos los proveedores de cada ítem (misma referencia). El precio de cada mes es el promedio ponderado: valor total ÷ cantidad homologada total.</div>
+    <div style="overflow: auto; max-height: 600px">
+      <table class="data-table" id="pitem-table">
+        <thead><tr id="pitem-thead-row"></tr></thead>
+        <tbody id="pitem-tbody"></tbody>
+      </table>
+    </div>
+    <div class="card-note">ⓘ Sobrecosto / Ahorro de cada ítem = suma del sobrecosto / ahorro de cada proveedor de ese ítem (pestaña Precio Unitario). Así los totales son los mismos de Precio Unitario y Negociaciones. Por eso, si a un proveedor le subió y a otro le bajó, el ítem puede mostrar sobrecosto y ahorro a la vez.</div>
+  </div>
+
+  <div class="chart-card" style="margin-top:1.5rem">
+    <div class="card-title">¿De dónde sale el ahorro? — <span id="pitem-ahorro-mes">–</span></div>
+    <div class="card-sub">Detalle de cada valor del resultado neto. Los totales son los mismos de la pestaña Negociaciones ("Ahorro vs. alzas de precio").</div>
+    <div style="overflow: auto">
+      <table class="data-table" id="pitem-ahorro-table">
+        <thead><tr><th>Concepto / Producto</th><th>Proveedor(es)</th><th class="num">Valor</th></tr></thead>
+        <tbody id="pitem-ahorro-tbody"></tbody>
+      </table>
+    </div>
   </div>
 </section>
 
@@ -3735,7 +3769,8 @@ function preciosCompararMes(mes) {
       cantidadMesActual: tiene ? cant : null, cantidadMesActualUM: x.u,
       gastoRealMesActual: tiene ? gasto : null, gastoPrecioProm3M: gastoProm,
       sobrecostoAhorro: gastoProm != null ? gasto - gastoProm : null,
-      totalRecienteBruto: idx.reduce((a, j) => a + (x.b[j] || 0), 0)
+      totalRecienteBruto: idx.reduce((a, j) => a + (x.b[j] || 0), 0),
+      bv: idx.map(j => x.b[j] || 0), qv: idx.map(j => x.q[j] || 0)
     });
   });
   rows.sort((a, b) => b.totalRecienteBruto - a.totalRecienteBruto);
@@ -4354,6 +4389,104 @@ function negHistToggleView() {
 
 // Ahorro de negociaciones por mes (AAAA-MM): del Excel de Ahorros + histórico guardado. El Excel solo trae el
 // nombre del mes, así que se asigna al año más reciente que no pase del último mes con datos del tablero.
+// ══ PRECIO POR ÍTEM ══ (agrupa las filas proveedor+ítem de preciosCompararMes por referencia + unidad)
+let PITEM_MES = null;
+function precioItemAgrupar(cmp) {
+  const g = {};
+  cmp.rows.forEach(r => {
+    const k = (String(r.referencia || '').trim() || r.item) + '|' + r.um;
+    const a = g[k] = g[k] || { item: r.item, ref: r.referencia, um: r.um, provs: [], b: r.bv.map(() => 0), q: r.qv.map(() => 0),
+      alza: 0, bajaNeg: 0, bajaMerc: 0, gastoProm: 0, peso: -1, neg: null };
+    if (r.totalRecienteBruto > a.peso) { a.peso = r.totalRecienteBruto; a.item = r.item; }
+    a.provs.push(r.proveedor);
+    r.bv.forEach((v, i) => { a.b[i] += v; a.q[i] += r.qv[i]; });
+    if (r.negociacion) a.neg = (a.neg || []).concat(r.negociacion);
+    if (r.sobrecostoAhorro == null) return;
+    a.gastoProm += r.gastoPrecioProm3M || 0;
+    const c = preciosCambio(r);
+    if (c > 0) a.alza += r.sobrecostoAhorro;
+    else if (c < 0) { if (r.negociacion) a.bajaNeg -= r.sobrecostoAhorro; else a.bajaMerc -= r.sobrecostoAhorro; }
+  });
+  return Object.values(g).map(a => {
+    const precios = a.b.map((v, i) => a.q[i] > 0 && v > 0 ? Math.round(v / a.q[i] * 100) / 100 : null);
+    const ant = precios.slice(0, -1).filter(v => v != null), act = precios[precios.length - 1];
+    const prom = ant.length ? ant.reduce((x, v) => x + v, 0) / ant.length : null;
+    const n = a.b.length - 1;
+    return Object.assign(a, { precios, variacionPct: act != null && prom ? (act - prom) / prom * 100 : null,
+      cantidad: a.q[n] > 0 ? a.q[n] : null, gasto: a.b[n] > 0 ? a.b[n] : null, neto: a.alza - a.bajaNeg - a.bajaMerc });
+  }).filter(a => a.precios.filter(v => v != null).length >= 2).sort((x, y) => (y.gasto || 0) - (x.gasto || 0));
+}
+function renderPrecioItemTab() {
+  const sel = document.getElementById('pitem-mes');
+  const disp = preciosMesesDisponibles();
+  const tbody = document.getElementById('pitem-tbody');
+  if (!disp.length) {
+    sel.innerHTML = ''; tbody.innerHTML = '<tr><td style="padding:1.5rem;color:var(--text-light)">Para ver esta pestaña, actualiza los datos (↻ Actualizar ahora) con esta versión del tablero.</td></tr>';
+    return;
+  }
+  if (!PITEM_MES || !disp.includes(PITEM_MES)) PITEM_MES = disp[disp.length - 1];
+  sel.innerHTML = disp.slice().reverse().map(m => `<option value="${m}"${m === PITEM_MES ? ' selected' : ''}>${mesLargoLbl(m)}</option>`).join('');
+  const cmp = preciosCompararMes(PITEM_MES);
+  const t = preciosTotales(cmp.rows);
+  const neg = negAhorroPorMes()[PITEM_MES];
+  const compras = (D.monthlySpend[PITEM_MES] || 0) * 1e6;
+  const pc = v => compras ? (v / compras * 100).toFixed(2) + '% del total comprado' : '';
+  const neto = (neg || 0) + t.bajaMerc - t.alza;
+  const mesTxt = mesLargoLbl(PITEM_MES);
+  document.getElementById('pitem-mes-txt').textContent = 'se compara con el promedio de ' + cmp.ventana.slice(0, -1).map(mesCortoLbl).join(', ');
+  document.getElementById('pitem-totales').innerHTML =
+    totCard('var(--wine)', 'Total compras de ' + mesTxt, fmtPesos(compras), 'valor neto de todas las facturas del mes') +
+    totCard('#15803D', '🤝 Ahorro por negociaciones', neg != null ? fmtPesos(neg) : '—', neg != null ? pc(neg) : 'el Excel de Ahorros no trae este mes') +
+    totCard('#16A34A', '🌦 Bajas por temporada / mercado', fmtPesos(t.bajaMerc), pc(t.bajaMerc)) +
+    totCard('#DC2626', 'Alzas de precio', fmtPesos(t.alza), pc(t.alza)) +
+    totCard(neto >= 0 ? '#16A34A' : '#DC2626', 'Efecto neto de precios', (neto >= 0 ? 'Ahorro ' : 'Sobrecosto ') + fmtPesos(neto), 'negociaciones + bajas por temporada − alzas');
+
+  // Tabla por ítem
+  const items = precioItemAgrupar(cmp);
+  const lbl = cmp.ventana.map(mesCortoLbl), lblMes = lbl[lbl.length - 1];
+  document.getElementById('pitem-thead-row').innerHTML = ['Ítem', '# Prov.', 'UM'].concat(lbl, ['Variación vs Prom 3M', 'Cantidad ' + lblMes, 'Gasto Real ' + lblMes, 'Gasto a Precio Prom 3M', 'Sobrecosto / Ahorro'])
+    .map(l => `<th style="position:sticky; top:0; background:#fff; z-index:1">${l}</th>`).join('');
+  document.getElementById('pitem-count').textContent = items.length;
+  const $ = v => v == null ? '–' : '$' + Math.round(v).toLocaleString('es-CO');
+  tbody.innerHTML = items.map(a => {
+    const v = a.variacionPct;
+    const plano = v == null || Math.abs(v) < PRECIOS_UMBRAL_CAMBIO * 100;
+    const vTxt = v == null ? '–' : plano ? '— ' + Math.abs(v).toFixed(1) + '%' : (v > 0 ? '▲ ' : '▼ ') + Math.abs(v).toFixed(1) + '%';
+    const vCls = plano ? 'var-flat' : v > 0 ? 'var-up' : 'var-down';
+    const nTxt = !a.alza && !a.bajaNeg && !a.bajaMerc ? '<span class="var-flat">$0</span>'
+      : `<span class="${a.neto > 0 ? 'var-up' : a.neto < 0 ? 'var-down' : 'var-flat'}">${a.neto > 0 ? '+' : a.neto < 0 ? '−' : ''}${fmtPesos(a.neto)}</span>`
+        + (a.alza && (a.bajaNeg || a.bajaMerc) ? `<div style="font-size:.68rem;color:var(--text-muted)">+${fmtPesos(a.alza)} / −${fmtPesos(a.bajaNeg + a.bajaMerc)}</div>` : '');
+    return `<tr>
+      <td>${a.neg ? '<span title="Tiene precio negociado (Excel de Ahorros)" style="cursor:help">🤝 </span>' : ''}${a.item.length > 34 ? a.item.slice(0, 32) + '…' : a.item}</td>
+      <td class="num" title="${a.provs.join(' · ').replace(/"/g, '&quot;')}" style="cursor:help">${a.provs.length}</td>
+      <td class="num">${a.um}</td>
+      ${a.precios.map(p => `<td class="num">${$(p)}</td>`).join('')}
+      <td class="num ${vCls}">${vTxt}</td>
+      <td class="num">${a.cantidad == null ? '–' : a.cantidad.toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' ' + a.um}</td>
+      <td class="num">${$(a.gasto)}</td>
+      <td class="num">${a.gastoProm ? $(a.gastoProm) : '–'}</td>
+      <td class="num">${nTxt}</td>
+    </tr>`;
+  }).join('');
+  vtApplyCollapse('pitem-tbody', 15);
+
+  // ¿De dónde sale el ahorro?
+  document.getElementById('pitem-ahorro-mes').textContent = mesTxt;
+  const NOM = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  const mesNom = NOM[+PITEM_MES.split('-')[1] - 1];
+  const prodNeg = (NEG_DATA.productos || []).map(p => ({ p, v: (p.impactoMes || {})[mesNom] || 0 })).filter(x => x.v).sort((x, y) => y.v - x.v);
+  const temp = items.filter(a => a.bajaMerc > 0.5).sort((x, y) => y.bajaMerc - x.bajaMerc);
+  const alz = items.filter(a => a.alza > 0.5).sort((x, y) => y.alza - x.alza);
+  const provTxt = l => { const u = [...new Set(l)]; return u.length > 2 ? u.slice(0, 2).join(', ') + ' y ' + (u.length - 2) + ' más' : u.join(', '); };
+  const grupo = (titulo, color, total, filas, signo) => `<tr style="background:var(--wine-ghost)"><td colspan="2" style="font-weight:700;color:${color}">${titulo}</td><td class="num" style="font-weight:700;color:${color}">${signo}${fmtPesos(total)}</td></tr>`
+    + filas.map(f => `<tr><td style="padding-left:1.5rem">${f[0]}</td><td style="color:var(--text-muted);font-size:.78rem">${f[1]}</td><td class="num" style="color:${color}">${signo}${fmtPesos(f[2])}</td></tr>`).join('');
+  document.getElementById('pitem-ahorro-tbody').innerHTML =
+    grupo('🤝 Ahorro por negociaciones (Excel de Ahorros, "Impacto ' + mesNom.toLowerCase() + '")', '#15803D', neg || 0, prodNeg.map(x => [x.p.producto, x.p.proveedor || '', x.v]), '−')
+    + grupo('🌦 Bajas de precio por temporada / mercado (sin negociación)', '#16A34A', t.bajaMerc, temp.map(a => [a.item, provTxt(a.provs), a.bajaMerc]), '−')
+    + grupo('🔺 Alzas de precio (se restan)', '#DC2626', t.alza, alz.map(a => [a.item, provTxt(a.provs), a.alza]), '+')
+    + `<tr style="font-weight:800;border-top:2px solid var(--wine)"><td colspan="2">RESULTADO NETO: ${neto >= 0 ? 'AHORRO' : 'SOBRECOSTO'} (negociaciones + temporada − alzas)</td><td class="num" style="color:${neto >= 0 ? '#16A34A' : '#DC2626'}">${neto >= 0 ? '−' : '+'}${fmtPesos(neto)}</td></tr>`;
+}
+
 function negAhorroPorMes() {
   const NOM = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
   const ult = months[months.length - 1] || '';
@@ -4559,6 +4692,7 @@ function renderTabCharts(tab) {
     case 'beneficios':  renderBeneficiosTab(); break;
     case 'distribucion':  renderDistribucionTab(); break;
     case 'precios':       renderPreciosTab(); break;
+    case 'precio-item':   renderPrecioItemTab(); break;
     case 'negociaciones': renderNegociacionesTab(); break;
     case 'ajustes':       renderAjustesTab(); break;
     case 'devoluciones':  renderDevolucionesTab(); break;
