@@ -1240,14 +1240,14 @@ footer strong { color: rgba(255,255,255,0.8); }
   <div class="tot-grid" id="pitem-totales"></div>
   <div class="chart-card">
     <div class="card-title">Precio Unitario por Ítem — Mes elegido y 3 meses anteriores (<span id="pitem-count">–</span> ítems)</div>
-    <div class="card-sub">Mismo cálculo de la pestaña Precio Unitario, sumando todos los proveedores de cada ítem (misma referencia). El precio de cada mes es el promedio ponderado: valor total ÷ cantidad homologada total.</div>
+    <div class="card-sub">Cada ítem (misma referencia) con todos sus proveedores juntos. Precio de cada mes = valor total ÷ cantidad homologada total.</div>
     <div style="overflow: auto; max-height: 600px">
       <table class="data-table" id="pitem-table">
         <thead><tr id="pitem-thead-row"></tr></thead>
         <tbody id="pitem-tbody"></tbody>
       </table>
     </div>
-    <div class="card-note">ⓘ Sobrecosto / Ahorro de cada ítem = suma del sobrecosto / ahorro de cada proveedor de ese ítem (pestaña Precio Unitario). Así los totales son los mismos de Precio Unitario y Negociaciones. Por eso, si a un proveedor le subió y a otro le bajó, el ítem puede mostrar sobrecosto y ahorro a la vez.</div>
+    <div class="card-note">ⓘ Todo se calcula por ítem, juntando todos los proveedores. Precio del mes = valor total ÷ cantidad total. Sobrecosto / Ahorro = (precio del mes − promedio de los 3 meses anteriores) × cantidad del mes = Gasto real − Gasto a precio prom 3M. Si el precio cambió menos de 0,5% se toma como el mismo precio ($0). Como aquí se mezclan proveedores, las bajas por temporada y las alzas pueden diferir un poco de las pestañas Precio Unitario y Negociaciones (que comparan cada proveedor contra sí mismo); el ahorro por negociación es el mismo (Excel de Ahorros).</div>
   </div>
 
   <div class="chart-card" style="margin-top:1.5rem">
@@ -4396,24 +4396,26 @@ function precioItemAgrupar(cmp) {
   cmp.rows.forEach(r => {
     const k = (String(r.referencia || '').trim() || r.item) + '|' + r.um;
     const a = g[k] = g[k] || { item: r.item, ref: r.referencia, um: r.um, provs: [], b: r.bv.map(() => 0), q: r.qv.map(() => 0),
-      alza: 0, bajaNeg: 0, bajaMerc: 0, gastoProm: 0, peso: -1, neg: null };
+      peso: -1, neg: null };
     if (r.totalRecienteBruto > a.peso) { a.peso = r.totalRecienteBruto; a.item = r.item; }
     a.provs.push(r.proveedor);
     r.bv.forEach((v, i) => { a.b[i] += v; a.q[i] += r.qv[i]; });
     if (r.negociacion) a.neg = (a.neg || []).concat(r.negociacion);
-    if (r.sobrecostoAhorro == null) return;
-    a.gastoProm += r.gastoPrecioProm3M || 0;
-    const c = preciosCambio(r);
-    if (c > 0) a.alza += r.sobrecostoAhorro;
-    else if (c < 0) { if (r.negociacion) a.bajaNeg -= r.sobrecostoAhorro; else a.bajaMerc -= r.sobrecostoAhorro; }
   });
+  // Todo por ítem, con todos los proveedores juntos: precio del mes = valor total ÷ cantidad total;
+  // sobrecosto / ahorro = (precio del mes − promedio de los 3 meses anteriores) × cantidad del mes.
   return Object.values(g).map(a => {
-    const precios = a.b.map((v, i) => a.q[i] > 0 && v > 0 ? Math.round(v / a.q[i] * 100) / 100 : null);
+    const precios = a.b.map((v, i) => a.q[i] > 0 && v > 0 ? v / a.q[i] : null);
     const ant = precios.slice(0, -1).filter(v => v != null), act = precios[precios.length - 1];
     const prom = ant.length ? ant.reduce((x, v) => x + v, 0) / ant.length : null;
     const n = a.b.length - 1;
-    return Object.assign(a, { precios, variacionPct: act != null && prom ? (act - prom) / prom * 100 : null,
-      cantidad: a.q[n] > 0 ? a.q[n] : null, gasto: a.b[n] > 0 ? a.b[n] : null, neto: a.alza - a.bajaNeg - a.bajaMerc });
+    const cantidad = a.q[n] > 0 ? a.q[n] : null, gasto = a.b[n] > 0 ? a.b[n] : null;
+    const pct = act != null && prom ? (act - prom) / prom : null;
+    const gastoProm = gasto != null && prom ? cantidad * prom : null;
+    // Cambio menor a 0,5%: mismo precio (redondeos), no cuenta como alza ni baja.
+    const neto = gastoProm == null ? null : Math.abs(pct) < PRECIOS_UMBRAL_CAMBIO ? 0 : gasto - gastoProm;
+    return Object.assign(a, { precios, prom, variacionPct: pct == null ? null : pct * 100, cantidad, gasto, gastoProm, neto,
+      alza: neto > 0 ? neto : 0, bajaNeg: neto < 0 && a.neg ? -neto : 0, bajaMerc: neto < 0 && !a.neg ? -neto : 0 });
   }).filter(a => a.precios.filter(v => v != null).length >= 2).sort((x, y) => (y.gasto || 0) - (x.gasto || 0));
 }
 function renderPrecioItemTab() {
@@ -4427,7 +4429,8 @@ function renderPrecioItemTab() {
   if (!PITEM_MES || !disp.includes(PITEM_MES)) PITEM_MES = disp[disp.length - 1];
   sel.innerHTML = disp.slice().reverse().map(m => `<option value="${m}"${m === PITEM_MES ? ' selected' : ''}>${mesLargoLbl(m)}</option>`).join('');
   const cmp = preciosCompararMes(PITEM_MES);
-  const t = preciosTotales(cmp.rows);
+  const items = precioItemAgrupar(cmp);
+  const t = items.reduce((x, a) => ({ alza: x.alza + a.alza, bajaMerc: x.bajaMerc + a.bajaMerc }), { alza: 0, bajaMerc: 0 });
   const neg = negAhorroPorMes()[PITEM_MES];
   const compras = (D.monthlySpend[PITEM_MES] || 0) * 1e6;
   const pc = v => compras ? (v / compras * 100).toFixed(2) + '% del total comprado' : '';
@@ -4442,7 +4445,6 @@ function renderPrecioItemTab() {
     totCard(neto >= 0 ? '#16A34A' : '#DC2626', 'Efecto neto de precios', (neto >= 0 ? 'Ahorro ' : 'Sobrecosto ') + fmtPesos(neto), 'negociaciones + bajas por temporada − alzas');
 
   // Tabla por ítem
-  const items = precioItemAgrupar(cmp);
   const lbl = cmp.ventana.map(mesCortoLbl), lblMes = lbl[lbl.length - 1];
   document.getElementById('pitem-thead-row').innerHTML = ['Ítem', '# Prov.', 'UM'].concat(lbl, ['Variación vs Prom 3M', 'Cantidad ' + lblMes, 'Gasto Real ' + lblMes, 'Gasto a Precio Prom 3M', 'Sobrecosto / Ahorro'])
     .map(l => `<th style="position:sticky; top:0; background:#fff; z-index:1">${l}</th>`).join('');
@@ -4453,9 +4455,8 @@ function renderPrecioItemTab() {
     const plano = v == null || Math.abs(v) < PRECIOS_UMBRAL_CAMBIO * 100;
     const vTxt = v == null ? '–' : plano ? '— ' + Math.abs(v).toFixed(1) + '%' : (v > 0 ? '▲ ' : '▼ ') + Math.abs(v).toFixed(1) + '%';
     const vCls = plano ? 'var-flat' : v > 0 ? 'var-up' : 'var-down';
-    const nTxt = !a.alza && !a.bajaNeg && !a.bajaMerc ? '<span class="var-flat">$0</span>'
-      : `<span class="${a.neto > 0 ? 'var-up' : a.neto < 0 ? 'var-down' : 'var-flat'}">${a.neto > 0 ? '+' : a.neto < 0 ? '−' : ''}${fmtPesos(a.neto)}</span>`
-        + (a.alza && (a.bajaNeg || a.bajaMerc) ? `<div style="font-size:.68rem;color:var(--text-muted)">+${fmtPesos(a.alza)} / −${fmtPesos(a.bajaNeg + a.bajaMerc)}</div>` : '');
+    const nTxt = a.neto == null ? '–' : !a.neto ? '<span class="var-flat">$0</span>'
+      : `<span class="${a.neto > 0 ? 'var-up' : 'var-down'}">${a.neto > 0 ? '+' : '−'}${fmtPesos(a.neto)}</span>`;
     return `<tr>
       <td>${a.neg ? '<span title="Tiene precio negociado (Excel de Ahorros)" style="cursor:help">🤝 </span>' : ''}${a.item.length > 34 ? a.item.slice(0, 32) + '…' : a.item}</td>
       <td class="num" title="${a.provs.join(' · ').replace(/"/g, '&quot;')}" style="cursor:help">${a.provs.length}</td>
@@ -4464,7 +4465,7 @@ function renderPrecioItemTab() {
       <td class="num ${vCls}">${vTxt}</td>
       <td class="num">${a.cantidad == null ? '–' : a.cantidad.toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' ' + a.um}</td>
       <td class="num">${$(a.gasto)}</td>
-      <td class="num">${a.gastoProm ? $(a.gastoProm) : '–'}</td>
+      <td class="num">${$(a.gastoProm)}</td>
       <td class="num">${nTxt}</td>
     </tr>`;
   }).join('');
