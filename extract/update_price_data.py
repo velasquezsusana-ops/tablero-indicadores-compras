@@ -36,6 +36,10 @@ with open_workbook(BASE + "precios unitarios.xlsb") as wbx:
             ref, um_compra, factor, um_base, origen = vals[1], vals[3], vals[4], vals[5], vals[6]
             if origen == 'PENDIENTE' or not ref or not factor: continue
             factor_lookup[(str(ref).strip(), str(um_compra).strip())] = (float(factor), str(um_base).strip())
+# Correcciones confirmadas por Compras cuando el factor del Excel está errado (tienen prioridad).
+# MP0127 QUESO CREMA: en "Factores conversión" dice 1 CAJA = 1 GR; la caja es de 4.000 g (confirmado oct-2026).
+FACTOR_FIX = {('MP0127', 'CAJA'): (4000.0, 'GR')}
+factor_lookup.update(FACTOR_FIX)
 print(f"  Factores: {len(factor_lookup)}")
 
 # 2) Precio homologado por (Proveedor,Item) - ultimos 4 meses -> 'Histórico de compras por item.xlsx'
@@ -108,51 +112,31 @@ for key, monthmap in pair_month_bruto_h.items():
     anteriores = [precios[m] for m in last4[:-1] if precios[m] is not None]
     prom_ant = sum(anteriores)/len(anteriores) if anteriores else None
     var_pct = round((mes_actual-prom_ant)/prom_ant*100,1) if (mes_actual is not None and prom_ant) else None
+    # Cantidad, gasto y sobrecosto/ahorro del MISMO proveedor+item y del MISMO mes actual que las columnas de precio
+    # (antes se tomaban de "precios unitarios.xlsb" / AA-AE por Referencia: todos los proveedores y otro mes).
+    m_ult = last4[-1]
+    cant_act = pair_month_cant_h[key].get(m_ult, 0) / divisor
+    gasto_act = monthmap.get(m_ult, 0)
+    tiene_act = cant_act > 0 and gasto_act > 0
+    gasto_prom = cant_act * prom_ant if (tiene_act and prom_ant) else None
     pairs_out.append({
         "proveedor": prov, "item": item, "referencia": pair_ref.get(key,""), "um": unidad_mostrada,
         "precios": [precios[m] for m in last4], "variacionPct": var_pct,
-        "totalRecienteBruto": round(pair_total_recent[key],0)
+        "totalRecienteBruto": round(pair_total_recent[key],0),
+        "pctVarVsProm3M": (mes_actual-prom_ant)/prom_ant if (mes_actual is not None and prom_ant) else None,
+        "cantidadMesActual": round(cant_act,2) if tiene_act else None, "cantidadMesActualUM": unidad_mostrada,
+        "gastoRealMesActual": gasto_act if tiene_act else None,
+        "gastoPrecioProm3M": gasto_prom,
+        "sobrecostoAhorro": (gasto_act - gasto_prom) if gasto_prom is not None else None,
     })
 pairs_out.sort(key=lambda x: -x["totalRecienteBruto"])
 print(f"  Pares homologados (>=2 meses): {len(pairs_out)}")
 
-# 3) Columnas AA-AE -> precios unitarios.xlsb / 'Precio unitario mensual'
-print("Leyendo columnas AA-AE...")
-aa_ae_by_ref = {}
-mes_actual_label = None
-with open_workbook(BASE + "precios unitarios.xlsb") as wbx:
-    with wbx.get_sheet('Precio unitario mensual') as sh:
-        for i, row in enumerate(sh.rows()):
-            vals = [c.v for c in row]
-            if i == 3:
-                mes_actual_label = vals[27]; continue
-            if i < 4 or not vals or not vals[1]: continue
-            ref = str(vals[1]).strip()
-            um_base_aa = str(vals[3]).strip() if vals[3] else ''
-            cant_raw = vals[27] if isinstance(vals[27],(int,float)) else None
-            # AB viene en la U.M. base real del item (col. D): GR (gramos) o UNID/otras.
-            # Homologamos gramos -> kg para que sea comparable con la columna "UM" de la tabla.
-            if cant_raw is not None and um_base_aa == 'GR':
-                cant_val, cant_um = round(cant_raw/1000, 2), 'kg'
-            elif cant_raw is not None and um_base_aa in ('UNID','UND'):
-                cant_val, cant_um = cant_raw, 'unid'
-            else:
-                cant_val, cant_um = cant_raw, (um_base_aa or '')
-            aa_ae_by_ref[ref] = {
-                "pctVarVsProm3M": vals[26] if isinstance(vals[26],(int,float)) else None,
-                "cantidadMesActual": cant_val,
-                "cantidadMesActualUM": cant_um,
-                "gastoRealMesActual": vals[28] if isinstance(vals[28],(int,float)) else None,
-                "gastoPrecioProm3M": vals[29] if isinstance(vals[29],(int,float)) else None,
-                "sobrecostoAhorro": vals[30] if isinstance(vals[30],(int,float)) else None,
-            }
-for p in pairs_out:
-    extra = aa_ae_by_ref.get(p["referencia"])
-    p.update(extra if extra else {"pctVarVsProm3M":None,"cantidadMesActual":None,"cantidadMesActualUM":'',"gastoRealMesActual":None,"gastoPrecioProm3M":None,"sobrecostoAhorro":None})
+mes_actual_label = f"Cantidad mes actual ({last4[-1]})"
 
 # 4) Preservar ocCountByMonth (tabla "Comparativo Anual", no depende de este flujo)
 html = open(HTML_PATH, encoding='utf-8').read()
-marker = 'const PRICE_DATA = '
+marker = 'let PRICE_DATA = '
 start = html.index(marker) + len(marker)
 old_obj, end_idx = json.JSONDecoder().raw_decode(html, start)
 assert html[end_idx] == ';', "Delimitador ';' no encontrado - abortar sin escribir"
