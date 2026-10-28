@@ -3850,12 +3850,21 @@ function preciosRenderCabecera(cmp, rows) {
     txt.innerHTML = 'se compara con el precio promedio de <strong>' + ant.join(', ') + '</strong>'
       + (cmp.mes === mesHoy ? ' · <em>mes en curso (datos parciales)</em>' : '');
   }
+  preciosTarjetas('precios-totales', cmp, rows, true);
+}
+// Tarjetas de totales (alzas, negociación, temporada, neto, compras comparadas) con los meses anteriores debajo.
+// Clic en una tarjeta: se despliega debajo de dónde sale ese valor (preciosVerDetalle).
+let PRECIOS_DET_CTX = {};
+function preciosTarjetas(destId, cmp, rows, usarFiltros) {
+  const tot = document.getElementById(destId);
+  PRECIOS_DET_CTX[destId] = cmp ? { mes: cmp.mes, rows, abierto: null } : null;
+  const det = document.getElementById(destId + '-detalle'); if (det) det.innerHTML = '';
   const t = preciosTotales(rows);
   const mesTxt = cmp ? mesLargoLbl(cmp.mes) : 'el último mes';
   const pct = v => t.gasto ? (v / t.gasto * 100).toFixed(1) + '% de lo comprado' : '';
   // Debajo de cada total: el mismo resultado en los meses anteriores (cada uno vs SUS 3 meses previos),
   // para ver la tendencia sin cambiar el selector. Respeta los filtros de proveedor e ítem.
-  const filtrar = rr => rr.filter(r => (!filterProvs.length || filterProvs.includes(r.proveedor)) && (!filterItems.length || filterItems.includes(r.item)));
+  const filtrar = rr => !usarFiltros ? rr : rr.filter(r => (!filterProvs.length || filterProvs.includes(r.proveedor)) && (!filterItems.length || filterItems.includes(r.item)));
   const previos = cmp ? cmp.ventana.slice(0, -1).map(m => { const c = preciosCompararMes(m); return c ? { m, t: preciosTotales(filtrar(c.rows)) } : null; }).filter(Boolean) : [];
   // Ahorro por negociación = el del Excel de Ahorros (columna Impacto del mes), para que coincida con lo reportado.
   // El neto suma ese ahorro + las bajas de los ítems no negociados − las alzas.
@@ -3866,16 +3875,85 @@ function preciosRenderCabecera(cmp, rows) {
   const hist = (f, col) => previos.length ? '<div style="margin:.35rem 0 .3rem;padding-top:.35rem;border-top:1px dashed rgba(0,0,0,.1);display:grid;grid-template-columns:auto 1fr;gap:.1rem .6rem;font-size:.74rem">'
     + previos.map(p => '<span style="color:var(--text-muted)">' + mesCortoLbl(p.m) + '</span><span style="text-align:right;font-weight:700;color:' + (typeof col === 'function' ? col(p.t) : col) + '">' + f(p.t) + '</span>').join('') + '</div>' : '';
   const sg = v => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtPesos(v);
-  const filtrado = filterProvs.length || filterItems.length;
+  const filtrado = usarFiltros && (filterProvs.length || filterItems.length);
+  const clic = tipo => cmp ? `<div style="margin-top:.35rem;font-weight:700;color:var(--wine-dark)">🔍 Clic para ver de dónde sale</div>` : '';
+  const tc = (tipo, color, lbl, val, sub) => cmp
+    ? `<div class="tot-card" data-det="${tipo}" onclick="preciosVerDetalle('${destId}','${tipo}')" style="cursor:pointer;--tot-c:${color}"><div class="t-lbl">${lbl}</div><div class="t-val">${val}</div><div class="t-sub">${sub}${clic(tipo)}</div></div>`
+    : totCard(color, lbl, val, sub);
   tot.innerHTML =
-    totCard('#DC2626', 'Sobrecosto por alzas de precio · ' + mesTxt, '+' + fmtPesos(t.alza), hist(x => '+' + fmtPesos(x.alza), '#DC2626') + t.nAlza + ' ítems subieron · ' + pct(t.alza)
+    tc('alza', '#DC2626', 'Sobrecosto por alzas de precio · ' + mesTxt, '+' + fmtPesos(t.alza), hist(x => '+' + fmtPesos(x.alza), '#DC2626') + t.nAlza + ' ítems subieron · ' + pct(t.alza)
       + (t.nAlzaGrande ? '<div style="margin-top:.25rem">De estos, ' + t.nAlzaGrande + ' de $600 mil o más suman +' + fmtPesos(t.alzaGrande) + '</div>' : '')) +
-    totCard('#15803D', '🤝 Ahorro por negociación · ' + mesTxt, t.neg != null ? '−' + fmtPesos(t.neg) : '—', hist(x => x.neg != null ? '−' + fmtPesos(x.neg) : '—', '#15803D')
+    tc('neg', '#15803D', '🤝 Ahorro por negociación · ' + mesTxt, t.neg != null ? '−' + fmtPesos(t.neg) : '—', hist(x => x.neg != null ? '−' + fmtPesos(x.neg) : '—', '#15803D')
       + (t.neg != null ? 'Del Excel de Ahorros (Impacto del mes) · ' + pct(t.neg) + (filtrado ? ' · no cambia con los filtros' : '') : 'el Excel de Ahorros no trae este mes')) +
-    totCard('#16A34A', '🌦 Ahorro por temporada / mercado · ' + mesTxt, '−' + fmtPesos(t.bajaMerc), hist(x => '−' + fmtPesos(x.bajaMerc), '#16A34A') + t.nBajaMerc + ' ítems bajaron sin negociación · ' + pct(t.bajaMerc)) +
-    totCard(t.neto > 0 ? '#DC2626' : '#16A34A', (t.neto > 0 ? 'Resultado neto: sobrecosto · ' : 'Resultado neto: ahorro · ') + mesTxt,
+    tc('temp', '#16A34A', '🌦 Ahorro por temporada / mercado · ' + mesTxt, '−' + fmtPesos(t.bajaMerc), hist(x => '−' + fmtPesos(x.bajaMerc), '#16A34A') + t.nBajaMerc + ' ítems bajaron sin negociación · ' + pct(t.bajaMerc)) +
+    tc('neto', t.neto > 0 ? '#DC2626' : '#16A34A', (t.neto > 0 ? 'Resultado neto: sobrecosto · ' : 'Resultado neto: ahorro · ') + mesTxt,
       (t.neto > 0 ? '+' : '−') + fmtPesos(t.neto), hist(x => sg(x.neto), x => x.neto > 0 ? '#DC2626' : '#16A34A') + pct(Math.abs(t.neto)) + ' frente a pagar el promedio de los 3 meses anteriores') +
-    totCard('var(--wine)', 'Compras comparadas en ' + mesTxt, fmtPesos(t.gasto), hist(x => fmtPesos(x.gasto), 'var(--wine)') + t.n + ' ítems con precio de referencia (todos sus proveedores juntos)');
+    tc('comp', 'var(--wine)', 'Compras comparadas en ' + mesTxt, fmtPesos(t.gasto), hist(x => fmtPesos(x.gasto), 'var(--wine)') + t.n + ' ítems con precio de referencia (todos sus proveedores juntos)');
+}
+
+function preciosVerDetalle(destId, tipo) {
+  const ctx = PRECIOS_DET_CTX[destId];
+  let det = document.getElementById(destId + '-detalle');
+  if (!det) { det = document.createElement('div'); det.id = destId + '-detalle'; document.getElementById(destId).after(det); }
+  document.querySelectorAll('#' + destId + ' .tot-card').forEach(c => c.style.outline = '');
+  if (!ctx || ctx.abierto === tipo) { det.innerHTML = ''; if (ctx) ctx.abierto = null; return; }
+  ctx.abierto = tipo;
+  const card = document.querySelector('#' + destId + ' .tot-card[data-det="' + tipo + '"]');
+  if (card) card.style.outline = '3px solid var(--tot-c)';
+  const $ = v => v == null ? '–' : '$' + Math.round(v).toLocaleString('es-CO');
+  const mesTxt = mesLargoLbl(ctx.mes);
+  const NOM = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  const mesNom = NOM[+ctx.mes.split('-')[1] - 1];
+  const items = precioItemAgrupar({ rows: ctx.rows });
+  const t = preciosTotales(ctx.rows);
+  const neg = negAhorroPorMes()[ctx.mes];
+  const provTxt = l => { const u = [...new Set(l)]; return u.length > 2 ? u.slice(0, 2).join(', ') + ' y ' + (u.length - 2) + ' más' : u.join(', '); };
+  const cant = a => a.cantidad == null ? '–' : a.cantidad.toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' ' + a.um;
+  const filaItem = (a, valor, color) => `<tr><td>${a.item}</td><td style="color:var(--text-muted);font-size:.78rem">${provTxt(a.provs)}</td><td class="num">${$(a.prom)}</td><td class="num">${$(a.precios[a.precios.length - 1])}</td>`
+    + `<td class="num">${a.variacionPct == null ? '–' : (a.variacionPct > 0 ? '+' : '') + a.variacionPct.toFixed(1) + '%'}</td><td class="num">${cant(a)}</td><td class="num" style="font-weight:700;color:${color}">${valor}</td></tr>`;
+  const tablaItems = (lista, f, color, total, signo) => `<table class="data-table"><thead><tr><th>Ítem</th><th>Proveedor(es)</th><th class="num">Precio prom. 3 meses ant.</th><th class="num">Precio ${mesTxt}</th><th class="num">Variación</th><th class="num">Cantidad</th><th class="num">Valor</th></tr></thead><tbody>`
+    + lista.map(a => filaItem(a, signo + fmtPesos(f(a)), color)).join('')
+    + `<tr style="font-weight:800;background:var(--wine-ghost)"><td colspan="6">TOTAL (${lista.length} ítems)</td><td class="num" style="color:${color}">${signo}${fmtPesos(total)}</td></tr></tbody></table>`;
+  let titulo = '', nota = '', cuerpo = '';
+  if (tipo === 'alza') {
+    titulo = '🔺 Sobrecosto por alzas de precio · ' + mesTxt;
+    nota = 'Ítems que subieron de precio. Valor = (precio del mes − precio promedio de los 3 meses anteriores) × cantidad del mes.';
+    cuerpo = tablaItems(items.filter(a => a.neto > 0).sort((x, y) => y.neto - x.neto), a => a.neto, '#DC2626', t.alza, '+');
+  } else if (tipo === 'temp') {
+    titulo = '🌦 Ahorro por temporada / mercado · ' + mesTxt;
+    nota = 'Ítems sin precio negociado que bajaron de precio. Valor = (precio promedio de los 3 meses anteriores − precio del mes) × cantidad del mes.';
+    cuerpo = tablaItems(items.filter(a => a.bajaMerc > 0).sort((x, y) => y.bajaMerc - x.bajaMerc), a => a.bajaMerc, '#16A34A', t.bajaMerc, '−');
+  } else if (tipo === 'comp') {
+    titulo = 'Compras comparadas · ' + mesTxt;
+    nota = 'Ítems comprados en el mes que tienen precio de referencia (compras en los 3 meses anteriores). Valor = gasto real del mes, sin IVA.';
+    const l = items.filter(a => a.neto != null).sort((x, y) => y.gasto - x.gasto);
+    cuerpo = tablaItems(l, a => a.gasto, 'var(--wine)', t.gasto, '');
+  } else if (tipo === 'neg') {
+    titulo = '🤝 Ahorro por negociación · ' + mesTxt;
+    nota = 'Productos con precio negociado. Sale del Excel de Ahorros (hoja DETALLE, columna "Impacto ' + mesNom.toLowerCase() + ' $").';
+    const l = (NEG_DATA.productos || []).map(p => ({ p, v: (p.impactoMes || {})[mesNom] || 0 })).filter(x => x.v).sort((x, y) => y.v - x.v);
+    cuerpo = l.length ? `<table class="data-table"><thead><tr><th>Producto</th><th>Proveedor</th><th class="num">Precio antes</th><th class="num">Precio negociado</th><th class="num">Ahorro del mes</th></tr></thead><tbody>`
+      + l.map(x => `<tr><td>${x.p.producto}</td><td style="color:var(--text-muted)">${x.p.proveedor || ''}</td><td class="num">${$(x.p.precioActual)}</td><td class="num">${$(x.p.precioNuevo)}</td><td class="num" style="font-weight:700;color:#15803D">−${fmtPesos(x.v)}</td></tr>`).join('')
+      + `<tr style="font-weight:800;background:var(--wine-ghost)"><td colspan="4">TOTAL (${l.length} productos)</td><td class="num" style="color:#15803D">−${fmtPesos(neg != null ? neg : 0)}</td></tr></tbody></table>`
+      : '<div style="padding:1rem;color:var(--text-light)">El Excel de Ahorros no trae ahorro por negociación para este mes.</div>';
+  } else if (tipo === 'neto') {
+    const neto = t.alza - t.bajaMerc - (neg || 0);
+    titulo = 'Resultado neto · ' + mesTxt;
+    nota = 'Resultado neto = alzas − ahorro por negociación − ahorro por temporada. Clic en cada tarjeta para ver su detalle.';
+    cuerpo = `<table class="data-table"><tbody>
+      <tr><td>🔺 Sobrecosto por alzas de precio</td><td class="num" style="color:#DC2626;font-weight:700">+${fmtPesos(t.alza)}</td></tr>
+      <tr><td>🤝 Ahorro por negociación (Excel de Ahorros)</td><td class="num" style="color:#15803D;font-weight:700">−${fmtPesos(neg || 0)}</td></tr>
+      <tr><td>🌦 Ahorro por temporada / mercado</td><td class="num" style="color:#16A34A;font-weight:700">−${fmtPesos(t.bajaMerc)}</td></tr>
+      <tr style="font-weight:800;background:var(--wine-ghost)"><td>RESULTADO NETO: ${neto > 0 ? 'SOBRECOSTO' : 'AHORRO'}</td><td class="num" style="color:${neto > 0 ? '#DC2626' : '#16A34A'}">${neto > 0 ? '+' : '−'}${fmtPesos(neto)}</td></tr>
+    </tbody></table>`;
+  }
+  det.innerHTML = `<div class="chart-card" style="margin:0 0 1.25rem">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem">
+      <div><div class="card-title">${titulo}</div><div class="card-sub">${nota}</div></div>
+      <button type="button" class="btn-secondary-outline" style="font-size:.75rem" onclick="preciosVerDetalle('${destId}','${tipo}')">✕ Cerrar</button>
+    </div>
+    <div style="overflow:auto;max-height:520px;margin-top:.6rem">${cuerpo}</div>
+  </div>`;
 }
 
 // Celda "Meses seguidos subiendo": resalta en rojo los productos que suben 2 meses o más seguidos (para tomar acción)
@@ -4449,19 +4527,9 @@ function renderPrecioItemTab() {
   sel.innerHTML = disp.slice().reverse().map(m => `<option value="${m}"${m === PITEM_MES ? ' selected' : ''}>${mesLargoLbl(m)}</option>`).join('');
   const cmp = preciosCompararMes(PITEM_MES);
   const items = precioItemAgrupar(cmp);
-  const t = items.reduce((x, a) => ({ alza: x.alza + a.alza, bajaMerc: x.bajaMerc + a.bajaMerc }), { alza: 0, bajaMerc: 0 });
-  const neg = negAhorroPorMes()[PITEM_MES];
-  const compras = (D.monthlySpend[PITEM_MES] || 0) * 1e6;
-  const pc = v => compras ? (v / compras * 100).toFixed(2) + '% del total comprado' : '';
-  const neto = (neg || 0) + t.bajaMerc - t.alza;
-  const mesTxt = mesLargoLbl(PITEM_MES);
-  document.getElementById('pitem-mes-txt').textContent = 'se compara con el promedio de ' + cmp.ventana.slice(0, -1).map(mesCortoLbl).join(', ');
-  document.getElementById('pitem-totales').innerHTML =
-    totCard('var(--wine)', 'Total compras de ' + mesTxt, fmtPesos(compras), 'valor neto de todas las facturas del mes') +
-    totCard('#15803D', '🤝 Ahorro por negociaciones', neg != null ? fmtPesos(neg) : '—', neg != null ? pc(neg) : 'el Excel de Ahorros no trae este mes') +
-    totCard('#16A34A', '🌦 Bajas por temporada / mercado', fmtPesos(t.bajaMerc), pc(t.bajaMerc)) +
-    totCard('#DC2626', 'Alzas de precio', fmtPesos(t.alza), pc(t.alza)) +
-    totCard(neto >= 0 ? '#16A34A' : '#DC2626', 'Efecto neto de precios', (neto >= 0 ? 'Ahorro ' : 'Sobrecosto ') + fmtPesos(neto), 'negociaciones + bajas por temporada − alzas');
+  document.getElementById('pitem-mes-txt').innerHTML = 'se compara con el precio promedio de <strong>' + cmp.ventana.slice(0, -1).map(mesCortoLbl).join(', ') + '</strong>';
+  preciosTarjetas('pitem-totales', cmp, cmp.rows, false);
+  const mesTxt = mesLargoLbl(PITEM_MES), neg = negAhorroPorMes()[PITEM_MES];
 
   // Tabla por ítem
   const lbl = cmp.ventana.map(mesCortoLbl), lblMes = lbl[lbl.length - 1];
