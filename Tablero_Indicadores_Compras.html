@@ -1198,7 +1198,7 @@ footer strong { color: rgba(255,255,255,0.8); }
   <div class="alert-grid" style="grid-template-columns:1fr 1fr" id="precios-insight-grid"></div>
   <div class="chart-card">
     <div class="card-title">Precio Unitario Homologado — Mes elegido y 3 meses anteriores (<span id="precios-count">–</span> combinaciones)</div>
-    <div class="card-sub" id="precios-sub">Comparación mes a mes del costo unitario pagado por ítem y proveedor, homologado a kg o unidad base con los factores corregidos de "precios unitarios" / hoja "Factores conversión"</div>
+    <div class="card-sub" id="precios-sub">Comparación mes a mes del costo unitario pagado por ítem y proveedor, homologado a kg o unidad base con los factores corregidos de "precios unitarios" / hoja "Factores conversión". Sirve para ver qué proveedor está más barato. Las tarjetas de arriba se calculan por ítem (todos los proveedores juntos, ver pestaña Precio por Ítem).</div>
     <div style="overflow: auto; max-height: 600px">
       <table class="data-table" id="precios-table">
         <thead><tr id="precios-thead-row">
@@ -1247,7 +1247,7 @@ footer strong { color: rgba(255,255,255,0.8); }
         <tbody id="pitem-tbody"></tbody>
       </table>
     </div>
-    <div class="card-note">ⓘ Todo se calcula por ítem, juntando todos los proveedores. Precio del mes = valor total ÷ cantidad total. Sobrecosto / Ahorro = (precio del mes − promedio de los 3 meses anteriores) × cantidad del mes = Gasto real − Gasto a precio prom 3M. Si el precio cambió menos de 0,5% se toma como el mismo precio ($0). Como aquí se mezclan proveedores, las bajas por temporada y las alzas pueden diferir un poco de las pestañas Precio Unitario y Negociaciones (que comparan cada proveedor contra sí mismo); el ahorro por negociación es el mismo (Excel de Ahorros).</div>
+    <div class="card-note">ⓘ Todo se calcula por ítem, juntando todos los proveedores. Precio del mes = valor total ÷ cantidad total. Sobrecosto / Ahorro = (precio del mes − promedio de los 3 meses anteriores) × cantidad del mes = Gasto real − Gasto a precio prom 3M. Si el precio cambió menos de 0,5% se toma como el mismo precio ($0). Los totales de esta pestaña son los mismos de Precio Unitario y Negociaciones.</div>
   </div>
 
   <div class="chart-card" style="margin-top:1.5rem">
@@ -3782,7 +3782,26 @@ const PRECIOS_UMBRAL_CAMBIO = 0.005;
 // Sobrecostos grandes (de $600.000 en adelante): se mencionan aparte dentro de la tarjeta roja, que muestra el total de todas las alzas.
 const PRECIOS_SOBRECOSTO_MIN = 600000;
 const preciosCambio = r => r.sobrecostoAhorro == null || r.pctVarVsProm3M == null || Math.abs(r.pctVarVsProm3M) < PRECIOS_UMBRAL_CAMBIO ? 0 : Math.sign(r.sobrecostoAhorro);
+// Totales por ÍTEM (todos los proveedores juntos, como la pestaña Precio por Ítem): lo que se mira es el precio del
+// ítem, sin importar a quién se le compró. La tabla por proveedor queda para comparar qué proveedor está más barato.
 function preciosTotales(rows) {
+  if (!rows.length || !rows[0].bv) return preciosTotalesProveedor(rows);
+  const t = { alzaGrande: 0, nAlzaGrande: 0, alza: 0, baja: 0, bajaNeg: 0, bajaMerc: 0, gasto: 0, gastoProm: 0, n: 0, nAlza: 0, nBaja: 0, nBajaNeg: 0, nBajaMerc: 0 };
+  precioItemAgrupar({ rows }).forEach(a => {
+    if (a.neto == null) return;
+    t.n++; t.gasto += a.gasto; t.gastoProm += a.gastoProm;
+    if (a.neto > 0) {
+      t.alza += a.neto; t.nAlza++;
+      if (a.neto >= PRECIOS_SOBRECOSTO_MIN) { t.alzaGrande += a.neto; t.nAlzaGrande++; }
+    } else if (a.neto < 0) {
+      t.baja -= a.neto; t.nBaja++;
+      if (a.neg) { t.bajaNeg -= a.neto; t.nBajaNeg++; } else { t.bajaMerc -= a.neto; t.nBajaMerc++; }
+    }
+  });
+  t.neto = t.alza - t.baja;
+  return t;
+}
+function preciosTotalesProveedor(rows) {
   // La baja de un ítem con precio negociado vigente (Excel de Ahorros) cuenta como "por negociación";
   // la de los demás, como "por temporada / mercado".
   const t = { alzaGrande: 0, nAlzaGrande: 0, alza: 0, baja: 0, bajaNeg: 0, bajaMerc: 0, gasto: 0, gastoProm: 0, n: 0, nAlza: 0, nBaja: 0, nBajaNeg: 0, nBajaMerc: 0 };
@@ -3849,14 +3868,14 @@ function preciosRenderCabecera(cmp, rows) {
   const sg = v => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtPesos(v);
   const filtrado = filterProvs.length || filterItems.length;
   tot.innerHTML =
-    totCard('#DC2626', 'Sobrecosto por alzas de precio · ' + mesTxt, '+' + fmtPesos(t.alza), hist(x => '+' + fmtPesos(x.alza), '#DC2626') + t.nAlza + ' combinaciones subieron · ' + pct(t.alza)
-      + (t.nAlzaGrande ? '<div style="margin-top:.25rem">De estas, ' + t.nAlzaGrande + ' de $600 mil o más suman +' + fmtPesos(t.alzaGrande) + '</div>' : '')) +
+    totCard('#DC2626', 'Sobrecosto por alzas de precio · ' + mesTxt, '+' + fmtPesos(t.alza), hist(x => '+' + fmtPesos(x.alza), '#DC2626') + t.nAlza + ' ítems subieron · ' + pct(t.alza)
+      + (t.nAlzaGrande ? '<div style="margin-top:.25rem">De estos, ' + t.nAlzaGrande + ' de $600 mil o más suman +' + fmtPesos(t.alzaGrande) + '</div>' : '')) +
     totCard('#15803D', '🤝 Ahorro por negociación · ' + mesTxt, t.neg != null ? '−' + fmtPesos(t.neg) : '—', hist(x => x.neg != null ? '−' + fmtPesos(x.neg) : '—', '#15803D')
       + (t.neg != null ? 'Del Excel de Ahorros (Impacto del mes) · ' + pct(t.neg) + (filtrado ? ' · no cambia con los filtros' : '') : 'el Excel de Ahorros no trae este mes')) +
-    totCard('#16A34A', '🌦 Ahorro por temporada / mercado · ' + mesTxt, '−' + fmtPesos(t.bajaMerc), hist(x => '−' + fmtPesos(x.bajaMerc), '#16A34A') + t.nBajaMerc + ' combinaciones bajaron sin negociación · ' + pct(t.bajaMerc)) +
+    totCard('#16A34A', '🌦 Ahorro por temporada / mercado · ' + mesTxt, '−' + fmtPesos(t.bajaMerc), hist(x => '−' + fmtPesos(x.bajaMerc), '#16A34A') + t.nBajaMerc + ' ítems bajaron sin negociación · ' + pct(t.bajaMerc)) +
     totCard(t.neto > 0 ? '#DC2626' : '#16A34A', (t.neto > 0 ? 'Resultado neto: sobrecosto · ' : 'Resultado neto: ahorro · ') + mesTxt,
       (t.neto > 0 ? '+' : '−') + fmtPesos(t.neto), hist(x => sg(x.neto), x => x.neto > 0 ? '#DC2626' : '#16A34A') + pct(Math.abs(t.neto)) + ' frente a pagar el promedio de los 3 meses anteriores') +
-    totCard('var(--wine)', 'Compras comparadas en ' + mesTxt, fmtPesos(t.gasto), hist(x => fmtPesos(x.gasto), 'var(--wine)') + t.n + ' combinaciones proveedor + ítem con precio de referencia');
+    totCard('var(--wine)', 'Compras comparadas en ' + mesTxt, fmtPesos(t.gasto), hist(x => fmtPesos(x.gasto), 'var(--wine)') + t.n + ' ítems con precio de referencia (todos sus proveedores juntos)');
 }
 
 // Celda "Meses seguidos subiendo": resalta en rojo los productos que suben 2 meses o más seguidos (para tomar acción)
