@@ -4488,6 +4488,12 @@ function negHistToggleView() {
 // nombre del mes, así que se asigna al año más reciente que no pase del último mes con datos del tablero.
 // ══ PRECIO POR ÍTEM ══ (agrupa las filas proveedor+ítem de preciosCompararMes por referencia + unidad)
 let PITEM_MES = null;
+let PITEM_SORT = null; // {col, dir}: orden elegido con clic en el encabezado de la tabla por ítem
+function pitemSortClick(col) {
+  if (PITEM_SORT && PITEM_SORT.col === col) PITEM_SORT.dir = -PITEM_SORT.dir;
+  else PITEM_SORT = { col, dir: 1 };
+  renderPrecioItemTab();
+}
 function precioItemAgrupar(cmp) {
   const g = {};
   cmp.rows.forEach(r => {
@@ -4526,7 +4532,21 @@ function renderPrecioItemTab() {
   if (!PITEM_MES || !disp.includes(PITEM_MES)) PITEM_MES = disp[disp.length - 1];
   sel.innerHTML = disp.slice().reverse().map(m => `<option value="${m}"${m === PITEM_MES ? ' selected' : ''}>${mesLargoLbl(m)}</option>`).join('');
   const cmp = preciosCompararMes(PITEM_MES);
-  const items = precioItemAgrupar(cmp);
+  let items = precioItemAgrupar(cmp);
+  if (PITEM_SORT) {
+    const nP = cmp.ventana.length;
+    const ext = [a => a.item, a => a.provs.length, a => a.um].concat(Array.from({ length: nP }, (_, k) => a => a.precios[k]),
+      [a => a.variacionPct, a => a.cantidad, a => a.gasto, a => a.gastoProm, a => a.neto]);
+    const f = ext[PITEM_SORT.col], dir = PITEM_SORT.dir;
+    items = items.slice().sort((a, b) => {
+      const va = f(a), vb = f(b);
+      if (va == null && vb == null) return 0;
+      if (va == null) return 1;   // vacíos siempre al final
+      if (vb == null) return -1;
+      if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
+      return String(va).localeCompare(String(vb), 'es', { numeric: true, sensitivity: 'base' }) * dir;
+    });
+  }
   document.getElementById('pitem-mes-txt').innerHTML = 'se compara con el precio promedio de <strong>' + cmp.ventana.slice(0, -1).map(mesCortoLbl).join(', ') + '</strong>';
   preciosTarjetas('pitem-totales', cmp, cmp.rows, false);
   const mesTxt = mesLargoLbl(PITEM_MES), neg = negAhorroPorMes()[PITEM_MES];
@@ -4534,7 +4554,11 @@ function renderPrecioItemTab() {
   // Tabla por ítem
   const lbl = cmp.ventana.map(mesCortoLbl), lblMes = lbl[lbl.length - 1];
   document.getElementById('pitem-thead-row').innerHTML = ['Ítem', '# Prov.', 'UM'].concat(lbl, ['Variación vs Prom 3M', 'Cantidad ' + lblMes, 'Gasto Real ' + lblMes, 'Gasto a Precio Prom 3M', 'Sobrecosto / Ahorro'])
-    .map(l => `<th style="position:sticky; top:0; background:#fff; z-index:1">${l}</th>`).join('');
+    .map((l, i) => {
+      const st = PITEM_SORT && PITEM_SORT.col === i ? (PITEM_SORT.dir === 1 ? ' ▲' : ' ▼') : ' <span style="opacity:.4">⇅</span>';
+      return `<th onclick="pitemSortClick(${i})" title="Clic para ordenar (menor a mayor / mayor a menor)" style="position:sticky; top:0; background:#fff; z-index:1; cursor:pointer; user-select:none">${l}${st}</th>`;
+    }).join('');
+  document.getElementById('pitem-thead-row').dataset.sortableInit = '1';
   document.getElementById('pitem-count').textContent = items.length;
   const $ = v => v == null ? '–' : '$' + Math.round(v).toLocaleString('es-CO');
   tbody.innerHTML = items.map(a => {
