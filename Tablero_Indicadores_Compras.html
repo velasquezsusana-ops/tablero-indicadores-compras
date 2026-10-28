@@ -3960,6 +3960,9 @@ function preciosVerDetalle(destId, tipo, mesOtro) {
       + l.map(x => `<tr><td>${x.p.producto}</td><td style="color:var(--text-muted)">${x.p.proveedor || ''}</td><td class="num">${$(x.p.precioActual)}</td><td class="num">${$(x.p.precioNuevo)}</td><td class="num" style="font-weight:700;color:#15803D">−${fmtPesos(x.v)}</td></tr>`).join('')
       + `<tr style="font-weight:800;background:var(--wine-ghost)"><td colspan="4">TOTAL (${l.length} productos)</td><td class="num" style="color:#15803D">−${fmtPesos(neg != null ? neg : 0)}</td></tr></tbody></table>`
       : '<div style="padding:1rem;color:var(--text-light)">El Excel de Ahorros no trae ahorro por negociación para este mes.</div>';
+    const sumDet = l.reduce((a, x) => a + x.v, 0);
+    if (l.length && neg != null && Math.abs(sumDet - neg) >= 1)
+      cuerpo = `<div style="margin-bottom:.6rem;padding:.6rem .8rem;border-radius:8px;background:#FEF3C7;color:#92400E;font-size:.82rem">⚠️ En el Excel de Ahorros no cuadran las hojas: la suma de los productos (hoja DETALLE) da <strong>${fmtPesos(sumDet)}</strong> y el total de la hoja RESUMEN dice <strong>${fmtPesos(neg)}</strong> (diferencia ${fmtPesos(sumDet - neg)}). Revisar que la fórmula de RESUMEN sume todas las filas de DETALLE.</div>` + cuerpo;
   } else if (tipo === 'neto') {
     const neto = t.alza - t.bajaMerc - (neg || 0);
     titulo = 'Resultado neto · ' + mesTxt;
@@ -4679,6 +4682,17 @@ function renderNegImpacto() {
     totCard('#DC2626', 'Alzas de precio / inflación', t ? fmtPesos(t.alza) : '—', t ? pc(t.alza) + ' · ' + t.nAlza + ' ítems' : 'sin comparación de precios') +
     totCard(neto == null ? 'var(--wine)' : neto >= 0 ? '#16A34A' : '#DC2626', 'Efecto neto de precios', neto == null ? '—' : (neto >= 0 ? 'Ahorro ' : 'Sobrecosto ') + fmtPesos(neto),
       neto == null ? '' : pc(Math.abs(neto)) + ' (negociaciones + bajas por temporada − alzas)');
+  // Clic en cada tarjeta: mismo despliegue de "de dónde sale" que Precio Unitario / Precio por Ítem.
+  const cmpDet = t ? preciosCompararMes(d.mes) : null;
+  PRECIOS_DET_CTX['neg-imp-kpis'] = cmpDet ? { mes: d.mes, rows: cmpDet.rows, usarFiltros: false } : null;
+  if (cmpDet) ['comp', 'neg', 'temp', 'alza', 'neto'].forEach((tipo, i) => {
+    const card = kpis.children[i];
+    if (!card) return;
+    card.style.cursor = 'pointer';
+    card.title = 'Clic para ver de dónde sale';
+    card.onclick = () => preciosVerDetalle('neg-imp-kpis', tipo);
+    card.querySelector('.t-sub').insertAdjacentHTML('beforeend', '<div style="margin-top:.35rem;font-weight:700;color:var(--wine-dark)">🔍 Clic para ver de dónde sale</div>');
+  });
   note.textContent = 'ⓘ El ahorro por negociaciones viene del Excel de Ahorros. Las bajas por temporada / mercado y las alzas comparan lo pagado '
     + 'en el mes con lo que hubiera costado al precio promedio de los 3 meses anteriores, por proveedor e ítem (mismo cálculo de Precio Unitario); '
     + 'de las bajas se excluyen las referencias con precio negociado vigente (columnas Referencia y Fecha inicio del Excel de Ahorros), '
