@@ -389,6 +389,10 @@ main { padding: 2rem; max-width: 1600px; margin: 0 auto; }
 .tot-card .t-lbl { font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
 .tot-card .t-val { font-size: 1.45rem; font-weight: 700; color: var(--tot-c, var(--wine)); margin: .25rem 0 .15rem; font-family: 'Segoe UI', Arial, sans-serif; }
 .tot-card .t-sub { font-size: .74rem; color: var(--text-muted); line-height: 1.35; }
+.det-link { cursor: pointer; border-radius: 4px; padding: 0 .2rem; }
+.det-link:hover { background: var(--wine-ghost); text-decoration: underline; }
+.det-modal { position: fixed; inset: 0; background: rgba(30, 10, 15, .45); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.det-modal-box { background: #fff; border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.3); width: min(1100px, 100%); max-height: 88vh; display: flex; flex-direction: column; padding: 1.1rem 1.25rem; }
 .mes-picker { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; background: #fff; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); padding: .7rem 1rem; margin-bottom: 1.1rem; font-size: .82rem; color: var(--text-muted); }
 .mes-picker strong { color: var(--wine-dark); }
 .alert-card {
@@ -3857,8 +3861,7 @@ function preciosRenderCabecera(cmp, rows) {
 let PRECIOS_DET_CTX = {};
 function preciosTarjetas(destId, cmp, rows, usarFiltros) {
   const tot = document.getElementById(destId);
-  PRECIOS_DET_CTX[destId] = cmp ? { mes: cmp.mes, rows, abierto: null } : null;
-  const det = document.getElementById(destId + '-detalle'); if (det) det.innerHTML = '';
+  PRECIOS_DET_CTX[destId] = cmp ? { mes: cmp.mes, rows, usarFiltros } : null;
   const t = preciosTotales(rows);
   const mesTxt = cmp ? mesLargoLbl(cmp.mes) : 'el último mes';
   const pct = v => t.gasto ? (v / t.gasto * 100).toFixed(1) + '% de lo comprado' : '';
@@ -3872,34 +3875,37 @@ function preciosTarjetas(destId, cmp, rows, usarFiltros) {
   previos.forEach(p => { p.t.neg = negXls[p.m] != null ? negXls[p.m] : null; p.t.neto = p.t.alza - p.t.bajaMerc - (p.t.neg || 0); });
   t.neg = cmp && negXls[cmp.mes] != null ? negXls[cmp.mes] : null;
   t.neto = t.alza - t.bajaMerc - (t.neg || 0);
-  const hist = (f, col) => previos.length ? '<div style="margin:.35rem 0 .3rem;padding-top:.35rem;border-top:1px dashed rgba(0,0,0,.1);display:grid;grid-template-columns:auto 1fr;gap:.1rem .6rem;font-size:.74rem">'
-    + previos.map(p => '<span style="color:var(--text-muted)">' + mesCortoLbl(p.m) + '</span><span style="text-align:right;font-weight:700;color:' + (typeof col === 'function' ? col(p.t) : col) + '">' + f(p.t) + '</span>').join('') + '</div>' : '';
+  const hist = (f, col, tipo) => previos.length ? '<div style="margin:.35rem 0 .3rem;padding-top:.35rem;border-top:1px dashed rgba(0,0,0,.1);display:grid;grid-template-columns:auto 1fr;gap:.1rem .6rem;font-size:.74rem">'
+    + previos.map(p => '<span style="color:var(--text-muted)">' + mesCortoLbl(p.m) + '</span><span' + (cmp && tipo ? ` onclick="event.stopPropagation();preciosVerDetalle('${destId}','${tipo}','${p.m}')" title="Clic para ver de dónde sale" class="det-link"` : '') + ' style="text-align:right;font-weight:700;color:' + (typeof col === 'function' ? col(p.t) : col) + '">' + f(p.t) + '</span>').join('') + '</div>' : '';
   const sg = v => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtPesos(v);
   const filtrado = usarFiltros && (filterProvs.length || filterItems.length);
-  const clic = tipo => cmp ? `<div style="margin-top:.35rem;font-weight:700;color:var(--wine-dark)">🔍 Clic para ver de dónde sale</div>` : '';
+  const clic = tipo => cmp ? `<div style="margin-top:.35rem;font-weight:700;color:var(--wine-dark)">🔍 Clic en cualquier valor para ver de dónde sale</div>` : '';
   const tc = (tipo, color, lbl, val, sub) => cmp
     ? `<div class="tot-card" data-det="${tipo}" onclick="preciosVerDetalle('${destId}','${tipo}')" style="cursor:pointer;--tot-c:${color}"><div class="t-lbl">${lbl}</div><div class="t-val">${val}</div><div class="t-sub">${sub}${clic(tipo)}</div></div>`
     : totCard(color, lbl, val, sub);
   tot.innerHTML =
-    tc('alza', '#DC2626', 'Sobrecosto por alzas de precio · ' + mesTxt, '+' + fmtPesos(t.alza), hist(x => '+' + fmtPesos(x.alza), '#DC2626') + t.nAlza + ' ítems subieron · ' + pct(t.alza)
+    tc('alza', '#DC2626', 'Sobrecosto por alzas de precio · ' + mesTxt, '+' + fmtPesos(t.alza), hist(x => '+' + fmtPesos(x.alza), '#DC2626', 'alza') + t.nAlza + ' ítems subieron · ' + pct(t.alza)
       + (t.nAlzaGrande ? '<div style="margin-top:.25rem">De estos, ' + t.nAlzaGrande + ' de $600 mil o más suman +' + fmtPesos(t.alzaGrande) + '</div>' : '')) +
-    tc('neg', '#15803D', '🤝 Ahorro por negociación · ' + mesTxt, t.neg != null ? '−' + fmtPesos(t.neg) : '—', hist(x => x.neg != null ? '−' + fmtPesos(x.neg) : '—', '#15803D')
+    tc('neg', '#15803D', '🤝 Ahorro por negociación · ' + mesTxt, t.neg != null ? '−' + fmtPesos(t.neg) : '—', hist(x => x.neg != null ? '−' + fmtPesos(x.neg) : '—', '#15803D', 'neg')
       + (t.neg != null ? 'Del Excel de Ahorros (Impacto del mes) · ' + pct(t.neg) + (filtrado ? ' · no cambia con los filtros' : '') : 'el Excel de Ahorros no trae este mes')) +
-    tc('temp', '#16A34A', '🌦 Ahorro por temporada / mercado · ' + mesTxt, '−' + fmtPesos(t.bajaMerc), hist(x => '−' + fmtPesos(x.bajaMerc), '#16A34A') + t.nBajaMerc + ' ítems bajaron sin negociación · ' + pct(t.bajaMerc)) +
+    tc('temp', '#16A34A', '🌦 Ahorro por temporada / mercado · ' + mesTxt, '−' + fmtPesos(t.bajaMerc), hist(x => '−' + fmtPesos(x.bajaMerc), '#16A34A', 'temp') + t.nBajaMerc + ' ítems bajaron sin negociación · ' + pct(t.bajaMerc)) +
     tc('neto', t.neto > 0 ? '#DC2626' : '#16A34A', (t.neto > 0 ? 'Resultado neto: sobrecosto · ' : 'Resultado neto: ahorro · ') + mesTxt,
-      (t.neto > 0 ? '+' : '−') + fmtPesos(t.neto), hist(x => sg(x.neto), x => x.neto > 0 ? '#DC2626' : '#16A34A') + pct(Math.abs(t.neto)) + ' frente a pagar el promedio de los 3 meses anteriores') +
-    tc('comp', 'var(--wine)', 'Compras comparadas en ' + mesTxt, fmtPesos(t.gasto), hist(x => fmtPesos(x.gasto), 'var(--wine)') + t.n + ' ítems con precio de referencia (todos sus proveedores juntos)');
+      (t.neto > 0 ? '+' : '−') + fmtPesos(t.neto), hist(x => sg(x.neto), x => x.neto > 0 ? '#DC2626' : '#16A34A', 'neto') + pct(Math.abs(t.neto)) + ' frente a pagar el promedio de los 3 meses anteriores') +
+    tc('comp', 'var(--wine)', 'Compras comparadas en ' + mesTxt, fmtPesos(t.gasto), hist(x => fmtPesos(x.gasto), 'var(--wine)', 'comp') + t.n + ' ítems con precio de referencia (todos sus proveedores juntos)');
 }
 
-function preciosVerDetalle(destId, tipo) {
-  const ctx = PRECIOS_DET_CTX[destId];
-  let det = document.getElementById(destId + '-detalle');
-  if (!det) { det = document.createElement('div'); det.id = destId + '-detalle'; document.getElementById(destId).after(det); }
-  document.querySelectorAll('#' + destId + ' .tot-card').forEach(c => c.style.outline = '');
-  if (!ctx || ctx.abierto === tipo) { det.innerHTML = ''; if (ctx) ctx.abierto = null; return; }
-  ctx.abierto = tipo;
-  const card = document.querySelector('#' + destId + ' .tot-card[data-det="' + tipo + '"]');
-  if (card) card.style.outline = '3px solid var(--tot-c)';
+function preciosCerrarDetalle() { const m = document.getElementById('det-modal'); if (m) m.remove(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') preciosCerrarDetalle(); });
+function preciosVerDetalle(destId, tipo, mesOtro) {
+  const ctx0 = PRECIOS_DET_CTX[destId];
+  if (!ctx0) return;
+  let ctx = ctx0;
+  if (mesOtro && mesOtro !== ctx0.mes) {
+    const c = preciosCompararMes(mesOtro);
+    if (!c) return;
+    const rr = !ctx0.usarFiltros ? c.rows : c.rows.filter(r => (!filterProvs.length || filterProvs.includes(r.proveedor)) && (!filterItems.length || filterItems.includes(r.item)));
+    ctx = { mes: mesOtro, rows: rr };
+  }
   const $ = v => v == null ? '–' : '$' + Math.round(v).toLocaleString('es-CO');
   const mesTxt = mesLargoLbl(ctx.mes);
   const NOM = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
@@ -3947,13 +3953,18 @@ function preciosVerDetalle(destId, tipo) {
       <tr style="font-weight:800;background:var(--wine-ghost)"><td>RESULTADO NETO: ${neto > 0 ? 'SOBRECOSTO' : 'AHORRO'}</td><td class="num" style="color:${neto > 0 ? '#DC2626' : '#16A34A'}">${neto > 0 ? '+' : '−'}${fmtPesos(neto)}</td></tr>
     </tbody></table>`;
   }
-  det.innerHTML = `<div class="chart-card" style="margin:0 0 1.25rem">
+  preciosCerrarDetalle();
+  const m = document.createElement('div');
+  m.id = 'det-modal'; m.className = 'det-modal';
+  m.onclick = e => { if (e.target === m) preciosCerrarDetalle(); };
+  m.innerHTML = `<div class="det-modal-box">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem">
       <div><div class="card-title">${titulo}</div><div class="card-sub">${nota}</div></div>
-      <button type="button" class="btn-secondary-outline" style="font-size:.75rem" onclick="preciosVerDetalle('${destId}','${tipo}')">✕ Cerrar</button>
+      <button type="button" class="btn-secondary-outline" style="font-size:.8rem;flex-shrink:0" onclick="preciosCerrarDetalle()">✕ Cerrar</button>
     </div>
-    <div style="overflow:auto;max-height:520px;margin-top:.6rem">${cuerpo}</div>
+    <div style="overflow:auto;margin-top:.6rem">${cuerpo}</div>
   </div>`;
+  document.body.appendChild(m);
 }
 
 // Celda "Meses seguidos subiendo": resalta en rojo los productos que suben 2 meses o más seguidos (para tomar acción)
