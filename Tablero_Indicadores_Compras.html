@@ -3864,7 +3864,9 @@ function preciosTarjetas(destId, cmp, rows, usarFiltros) {
   PRECIOS_DET_CTX[destId] = cmp ? { mes: cmp.mes, rows, usarFiltros } : null;
   const t = preciosTotales(rows);
   const mesTxt = cmp ? mesLargoLbl(cmp.mes) : 'el último mes';
-  const pct = v => t.gasto ? (v / t.gasto * 100).toFixed(1) + '% de lo comprado' : '';
+  t.total = cmp ? preciosTotalMes(cmp.mes, usarFiltros) : null;
+  const base = t.total || t.gasto;
+  const pct = v => base ? (v / base * 100).toFixed(1) + '% de lo comprado' : '';
   // Debajo de cada total: el mismo resultado en los meses anteriores (cada uno vs SUS 3 meses previos),
   // para ver la tendencia sin cambiar el selector. Respeta los filtros de proveedor e ítem.
   const filtrar = rr => !usarFiltros ? rr : rr.filter(r => (!filterProvs.length || filterProvs.includes(r.proveedor)) && (!filterItems.length || filterItems.includes(r.item)));
@@ -3872,6 +3874,7 @@ function preciosTarjetas(destId, cmp, rows, usarFiltros) {
   // Ahorro por negociación = el del Excel de Ahorros (columna Impacto del mes), para que coincida con lo reportado.
   // El neto suma ese ahorro + las bajas de los ítems no negociados − las alzas.
   const negXls = negAhorroPorMes();
+  previos.forEach(p => { p.t.total = preciosTotalMes(p.m, usarFiltros); });
   previos.forEach(p => { p.t.neg = negXls[p.m] != null ? negXls[p.m] : null; p.t.neto = p.t.alza - p.t.bajaMerc - (p.t.neg || 0); });
   t.neg = cmp && negXls[cmp.mes] != null ? negXls[cmp.mes] : null;
   t.neto = t.alza - t.bajaMerc - (t.neg || 0);
@@ -3891,9 +3894,19 @@ function preciosTarjetas(destId, cmp, rows, usarFiltros) {
     tc('temp', '#16A34A', '🌦 Ahorro por temporada / mercado · ' + mesTxt, '−' + fmtPesos(t.bajaMerc), hist(x => '−' + fmtPesos(x.bajaMerc), '#16A34A', 'temp') + t.nBajaMerc + ' ítems bajaron sin negociación · ' + pct(t.bajaMerc)) +
     tc('neto', t.neto > 0 ? '#DC2626' : '#16A34A', (t.neto > 0 ? 'Resultado neto: sobrecosto · ' : 'Resultado neto: ahorro · ') + mesTxt,
       (t.neto > 0 ? '+' : '−') + fmtPesos(t.neto), hist(x => sg(x.neto), x => x.neto > 0 ? '#DC2626' : '#16A34A', 'neto') + pct(Math.abs(t.neto)) + ' frente a pagar el promedio de los 3 meses anteriores') +
-    tc('comp', 'var(--wine)', 'Compras comparadas en ' + mesTxt, fmtPesos(t.gasto), hist(x => fmtPesos(x.gasto), 'var(--wine)', 'comp') + t.n + ' ítems con precio de referencia (todos sus proveedores juntos)');
+    (t.total != null
+      ? tc('comp', 'var(--wine)', 'Compras del mes · ' + mesTxt, fmt(t.total / 1e6), hist(x => x.total != null ? fmt(x.total / 1e6) : '—', 'var(--wine)', 'comp')
+        + 'Igual a la gráfica del Resumen Ejecutivo. Comparadas: ' + fmt(t.gasto / 1e6) + ' (' + t.n + ' ítems con precio de referencia) · sin comparar: ' + fmt(Math.max(0, t.total - t.gasto) / 1e6) + ' (ítems nuevos, servicios o sin cantidad)')
+      : tc('comp', 'var(--wine)', 'Compras comparadas en ' + mesTxt, fmtPesos(t.gasto), hist(x => fmtPesos(x.gasto), 'var(--wine)', 'comp') + t.n + ' ítems con precio de referencia (todos sus proveedores juntos)'));
 }
 
+// Total facturado del mes en pesos: el mismo de la gráfica "Gasto neto mensual" del Resumen Ejecutivo
+// (con los filtros de proveedor / ítem / bodega cuando la pestaña los usa).
+function preciosTotalMes(m, usarFiltros) {
+  const i = months.indexOf(m);
+  const v = usarFiltros && i >= 0 ? getRawSpendSeries()[i] : D.monthlySpend[m];
+  return v == null ? null : v * 1e6;
+}
 function preciosCerrarDetalle() { const m = document.getElementById('det-modal'); if (m) m.remove(); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') preciosCerrarDetalle(); });
 function preciosVerDetalle(destId, tipo, mesOtro) {
@@ -3904,7 +3917,7 @@ function preciosVerDetalle(destId, tipo, mesOtro) {
     const c = preciosCompararMes(mesOtro);
     if (!c) return;
     const rr = !ctx0.usarFiltros ? c.rows : c.rows.filter(r => (!filterProvs.length || filterProvs.includes(r.proveedor)) && (!filterItems.length || filterItems.includes(r.item)));
-    ctx = { mes: mesOtro, rows: rr };
+    ctx = { mes: mesOtro, rows: rr, usarFiltros: ctx0.usarFiltros };
   }
   const $ = v => v == null ? '–' : '$' + Math.round(v).toLocaleString('es-CO');
   const mesTxt = mesLargoLbl(ctx.mes);
@@ -3930,10 +3943,15 @@ function preciosVerDetalle(destId, tipo, mesOtro) {
     nota = 'Ítems sin precio negociado que bajaron de precio. Valor = (precio promedio de los 3 meses anteriores − precio del mes) × cantidad del mes.';
     cuerpo = tablaItems(items.filter(a => a.bajaMerc > 0).sort((x, y) => y.bajaMerc - x.bajaMerc), a => a.bajaMerc, '#16A34A', t.bajaMerc, '−');
   } else if (tipo === 'comp') {
-    titulo = 'Compras comparadas · ' + mesTxt;
-    nota = 'Ítems comprados en el mes que tienen precio de referencia (compras en los 3 meses anteriores). Valor = gasto real del mes, sin IVA.';
+    const total = preciosTotalMes(ctx.mes, ctx.usarFiltros);
+    titulo = 'Compras del mes · ' + mesTxt;
+    nota = 'El total es el de la gráfica "Gasto neto mensual" del Resumen Ejecutivo. La tabla muestra los ítems comparados: los que tienen precio de referencia (compras en los 3 meses anteriores). Valor = gasto real del mes, sin IVA.';
     const l = items.filter(a => a.neto != null).sort((x, y) => y.gasto - x.gasto);
-    cuerpo = tablaItems(l, a => a.gasto, 'var(--wine)', t.gasto, '');
+    cuerpo = (total != null ? `<table class="data-table" style="margin-bottom:.8rem"><tbody>
+      <tr><td>Compras comparadas (${t.n} ítems con precio de referencia)</td><td class="num" style="font-weight:700">${fmtPesos(t.gasto)}</td></tr>
+      <tr><td>Sin comparar (ítems nuevos o que no se compraron en los 3 meses anteriores, servicios, compras sin cantidad)</td><td class="num" style="font-weight:700">${fmtPesos(Math.max(0, total - t.gasto))}</td></tr>
+      <tr style="font-weight:800;background:var(--wine-ghost)"><td>TOTAL COMPRAS DEL MES (Resumen Ejecutivo)</td><td class="num" style="color:var(--wine)">${fmt(total / 1e6)}</td></tr>
+    </tbody></table>` : '') + tablaItems(l, a => a.gasto, 'var(--wine)', t.gasto, '');
   } else if (tipo === 'neg') {
     titulo = '🤝 Ahorro por negociación · ' + mesTxt;
     nota = 'Productos con precio negociado. Sale del Excel de Ahorros (hoja DETALLE, columna "Impacto ' + mesNom.toLowerCase() + ' $").';
