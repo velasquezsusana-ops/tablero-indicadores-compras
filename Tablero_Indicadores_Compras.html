@@ -3753,6 +3753,9 @@ function preciosCompararMes(mes) {
   // Todos los proveedores del Histórico (no solo los comparables), para saber si el del Excel existe aunque sea nuevo en esa referencia.
   const provsTodos = [...new Set(preciosParesPorRef().map(x => x.p).concat(((HIST_PROV_ITEM && HIST_PROV_ITEM.porProveedor) || []).map(p => p.name)))];
   preciosParesPorRef().forEach(x => {
+    // Servicios (referencias SV, ej. SV0004 transporte): cada unidad es una factura de valor distinto, no un precio
+    // comparable. Siguen en el gasto del mes, pero no entran en alzas ni ahorros.
+    if (/^SV/i.test(String(x.r || '').trim())) return;
     const precios = idx.map(j => x.q[j] > 0 && x.b[j] > 0 ? Math.round(x.b[j] / x.q[j] * 100) / 100 : null);
     if (precios.filter(v => v != null).length < 2) return;
     const actual = precios[precios.length - 1];
