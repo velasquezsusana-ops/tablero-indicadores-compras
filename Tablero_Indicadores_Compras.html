@@ -5891,7 +5891,7 @@ function actualizarParsePrecios(wbXlsb, histRows, prevPriceData, wbHist) {
 
   // 2) Precio homologado por (proveedor,item), últimos 4 meses, desde Histórico de compras
   // (se homologan TODOS los meses del período: el tablero deja elegir cualquier mes y lo compara con sus 3 anteriores)
-  const pairTotalRecent = {}, pairRef = {}, rawHomologRows = {}, pairName = {}, pairNameMes = {};
+  const pairTotalRecent = {}, pairRef = {}, rawHomologRows = {}, pairName = {}, pairNameMes = {}, pairAjuste = {};
   histRows.forEach(r => {
     const fecha = actualizarParseDate(r['Fecha']);
     if (!fecha) return;
@@ -5903,9 +5903,15 @@ function actualizarParsePrecios(wbXlsb, histRows, prevPriceData, wbHist) {
     const cant = Number(r['Cantidad']) || 0;
     const bruto = Number(r['Valor bruto local']) || 0;
     const um = String(r['U.M.'] || '').trim();
-    if (!prov || !item || cant === 0) return;
+    if (!prov || !item) return;
     // Por referencia (si la trae): así un producto renombrado en Siesa sigue siendo el mismo. Se muestra su nombre más reciente.
     const key = prov + '' + (ref ? 'REF:' + ref : item);
+    // Notas crédito / débito sin cantidad (CNS / CNC, ej. Alvora jul-2026): no son compras nuevas, ajustan el precio
+    // de lo comprado. Se suman (con su signo) al valor de ese proveedor + ítem en ese mes, más abajo.
+    if (cant === 0) {
+      if (bruto) { pairAjuste[key] = pairAjuste[key] || {}; pairAjuste[key][keyMonth] = (pairAjuste[key][keyMonth] || 0) + bruto; }
+      return;
+    }
     if (last4.includes(keyMonth)) pairTotalRecent[key] = (pairTotalRecent[key] || 0) + bruto;
     pairRef[key] = ref;
     if (!pairNameMes[key] || keyMonth >= pairNameMes[key]) { pairName[key] = [prov, item]; pairNameMes[key] = keyMonth; }
@@ -5932,6 +5938,11 @@ function actualizarParsePrecios(wbXlsb, histRows, prevPriceData, wbHist) {
       pairBaseUnit[key] = baseUnit;
     });
   });
+  // Solo en meses con compra de ese proveedor + ítem, y sin dejar el valor en cero o negativo.
+  Object.entries(pairAjuste).forEach(([key, porMes]) => Object.entries(porMes).forEach(([m, v]) => {
+    const b = pairMonthBrutoH[key] && pairMonthBrutoH[key][m];
+    if (b > 0 && b + v > 0) pairMonthBrutoH[key][m] = b + v;
+  }));
 
   const pairsOut = [];
   Object.entries(pairMonthBrutoH).forEach(([key, monthmap]) => {
