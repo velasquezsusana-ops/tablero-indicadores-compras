@@ -3755,7 +3755,8 @@ function preciosCompararMes(mes) {
   preciosParesPorRef().forEach(x => {
     // Servicios (referencias SV, ej. SV0004 transporte): cada unidad es una factura de valor distinto, no un precio
     // comparable. Siguen en el gasto del mes, pero no entran en alzas ni ahorros.
-    if (/^SV/i.test(String(x.r || '').trim())) return;
+    // También por nombre: si el archivo cargado no trae la Referencia, el transporte quedaría sin "SV" y se colaría.
+    if (/^SV/i.test(String(x.r || '').trim()) || /\bTRANSPORTE\b/i.test(String(x.i || ''))) return;
     const precios = idx.map(j => x.q[j] > 0 && x.b[j] > 0 ? Math.round(x.b[j] / x.q[j] * 100) / 100 : null);
     if (precios.filter(v => v != null).length < 2) return;
     const actual = precios[precios.length - 1];
