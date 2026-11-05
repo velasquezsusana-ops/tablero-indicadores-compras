@@ -4861,7 +4861,7 @@ function renderNegParticipacionTable(rows, totalMes) {
 let currentTab = 'resumen';
 
 function applyFilters() {
-  let info = D.totalFacturas.toLocaleString('es-CO') + ' facturas · ' + D.totalProveedores + ' proveedores · ' + D.totalItems + ' ítems';
+  let info = '';
   const parts = [];
   if (filterAnios.length) parts.push('Año: ' + anioLabel());
   if (filterMeses.length) parts.push('Mes: ' + mesLabel());
@@ -4882,7 +4882,7 @@ function resetFilters() {
   });
   filterAnios = []; filterMeses = []; filterProvs = []; filterItems = []; filterBodegas = [];
   populateFechaOptions();
-  document.getElementById('filter-info').textContent = D.totalFacturas.toLocaleString('es-CO') + ' facturas · ' + D.totalProveedores + ' proveedores · ' + D.totalItems + ' ítems';
+  document.getElementById('filter-info').textContent = '';
   renderAll();
 }
 
@@ -6382,7 +6382,7 @@ function actualizarCargarRespaldo(ev) {
         D = p.D; FILTER = p.FILTER; LT_DATA = p.LT_DATA; LT_DETAIL = p.LT_DETAIL; DA = p.DA; DN = p.DN; PROV_ITEM_CROSS = p.PROV_ITEM_CROSS;
         populateFilters();
         document.getElementById('filter-info').textContent =
-          D.totalFacturas.toLocaleString('es-CO') + ' facturas · ' + D.totalProveedores + ' proveedores · ' + D.totalItems + ' ítems';
+          '';
       }
       if (snapshot.envios && window.vRefreshEnvios) window.vRefreshEnvios(snapshot.envios.rows, snapshot.envios.pdvNames);
       if (snapshot.meta) actualizarPublishedMeta = snapshot.meta;
@@ -7413,7 +7413,7 @@ async function actualizarPublicar(silent) {
       actualizarSafeSave('montolivo_bodega_data', BODEGA_MASTER, 'Filtro por bodega');
       populateFilters();
       document.getElementById('filter-info').textContent =
-        D.totalFacturas.toLocaleString('es-CO') + ' facturas · ' + D.totalProveedores + ' proveedores · ' + D.totalItems + ' ítems';
+        '';
       actualizados.push('Resumen Ejecutivo, Tendencias, Proveedores, Ítems, Ajustes, Devoluciones (OC anuladas), Mermas, Órdenes Completas, Detalle OC');
     } catch (err) { pendientes.push('Resumen Ejecutivo y demás (' + err.message + ')'); }
   } else if (actualizarTemp['historico'] || actualizarTemp['orden'] || actualizarTemp['salidas']) {
@@ -7806,7 +7806,7 @@ document.addEventListener('DOMContentLoaded', () => {
   actualizarRestoreFromStorage();
   populateFilters();
   document.getElementById('filter-info').textContent =
-    D.totalFacturas.toLocaleString('es-CO') + ' facturas · ' + D.totalProveedores + ' proveedores · ' + D.totalItems + ' ítems';
+    '';
   renderAll();
   initSortableTables();
   populateNegFilters();
