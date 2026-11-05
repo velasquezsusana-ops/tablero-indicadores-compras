@@ -3920,16 +3920,19 @@ function preciosVerDetalle(destId, tipo, mesOtro) {
   if (mesOtro && mesOtro !== ctx0.mes) {
     const c = preciosCompararMes(mesOtro);
     if (!c) return;
-    const rr = !ctx0.usarFiltros ? c.rows : c.rows.filter(r => (!filterProvs.length || filterProvs.includes(r.proveedor)) && (!filterItems.length || filterItems.includes(r.item)));
-    ctx = { mes: mesOtro, rows: rr, usarFiltros: ctx0.usarFiltros };
+    const rr = ctx0.prod ? c.rows.filter(r => ctx0.prod.refs.has(String(r.referencia || '').trim().toUpperCase()))
+      : !ctx0.usarFiltros ? c.rows : c.rows.filter(r => (!filterProvs.length || filterProvs.includes(r.proveedor)) && (!filterItems.length || filterItems.includes(r.item)));
+    ctx = { mes: mesOtro, rows: rr, usarFiltros: ctx0.usarFiltros, prod: ctx0.prod };
   }
+  // Con un producto elegido en Negociaciones (ctx.prod), el ahorro negociado y el detalle son solo de ese producto.
+  const prod = ctx.prod || null;
   const $ = v => v == null ? '–' : '$' + Math.round(v).toLocaleString('es-CO');
   const mesTxt = mesLargoLbl(ctx.mes);
   const NOM = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
   const mesNom = NOM[+ctx.mes.split('-')[1] - 1];
   const items = precioItemAgrupar({ rows: ctx.rows });
   const t = preciosTotales(ctx.rows);
-  const neg = negAhorroPorMes()[ctx.mes];
+  const neg = prod ? prod.neg[ctx.mes] : negAhorroPorMes()[ctx.mes];
   const provTxt = l => { const u = [...new Set(l)]; return u.length > 2 ? u.slice(0, 2).join(', ') + ' y ' + (u.length - 2) + ' más' : u.join(', '); };
   const cant = a => a.cantidad == null ? '–' : a.cantidad.toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' ' + a.um;
   const filaItem = (a, valor, color) => `<tr><td>${a.item}</td><td style="color:var(--text-muted);font-size:.78rem">${provTxt(a.provs)}</td><td class="num">${$(a.prom)}</td><td class="num">${$(a.precios[a.precios.length - 1])}</td>`
@@ -3947,7 +3950,7 @@ function preciosVerDetalle(destId, tipo, mesOtro) {
     nota = 'Ítems sin precio negociado que bajaron de precio. Valor = (precio promedio de los 3 meses anteriores − precio del mes) × cantidad del mes.';
     cuerpo = tablaItems(items.filter(a => a.bajaMerc > 0).sort((x, y) => y.bajaMerc - x.bajaMerc), a => a.bajaMerc, '#16A34A', t.bajaMerc, '−');
   } else if (tipo === 'comp') {
-    const total = preciosTotalMes(ctx.mes, ctx.usarFiltros);
+    const total = prod ? null : preciosTotalMes(ctx.mes, ctx.usarFiltros);
     titulo = 'Compras del mes · ' + mesTxt;
     nota = 'El total es el de la gráfica "Gasto neto mensual" del Resumen Ejecutivo. La tabla muestra los ítems comparados: los que tienen precio de referencia (compras en los 3 meses anteriores). Valor = gasto real del mes, sin IVA.';
     const l = items.filter(a => a.neto != null).sort((x, y) => y.gasto - x.gasto);
@@ -3959,7 +3962,8 @@ function preciosVerDetalle(destId, tipo, mesOtro) {
   } else if (tipo === 'neg') {
     titulo = '🤝 Ahorro por negociación · ' + mesTxt;
     nota = 'Productos con precio negociado. Sale del Excel de Ahorros (hoja DETALLE, columna "Impacto ' + mesNom.toLowerCase() + ' $").';
-    const l = (NEG_DATA.productos || []).map(p => ({ p, v: (p.impactoMes || {})[mesNom] || 0 })).filter(x => x.v).sort((x, y) => y.v - x.v);
+    const l = (NEG_DATA.productos || []).filter(p => !prod || p.producto === prod.nombre)
+      .map(p => ({ p, v: (p.impactoMes || {})[mesNom] || 0 })).filter(x => x.v).sort((x, y) => y.v - x.v);
     cuerpo = l.length ? `<table class="data-table"><thead><tr><th>Producto</th><th>Proveedor</th><th class="num">Precio antes</th><th class="num">Precio negociado</th><th class="num">Ahorro del mes</th></tr></thead><tbody>`
       + l.map(x => `<tr><td>${x.p.producto}</td><td style="color:var(--text-muted)">${x.p.proveedor || ''}</td><td class="num">${$(x.p.precioActual)}</td><td class="num">${$(x.p.precioNuevo)}</td><td class="num" style="font-weight:700;color:#15803D">−${fmtPesos(x.v)}</td></tr>`).join('')
       + `<tr style="font-weight:800;background:var(--wine-ghost)"><td colspan="4">TOTAL (${l.length} productos)</td><td class="num" style="color:#15803D">−${fmtPesos(neg != null ? neg : 0)}</td></tr></tbody></table>`
@@ -4631,32 +4635,58 @@ function renderPrecioItemTab() {
     : '<tr><td colspan="5" style="text-align:center;color:var(--text-light);padding:1.5rem">El Excel de Ahorros no trae ahorro por negociación para este mes.</td></tr>';
 }
 
-function negAhorroPorMes() {
+// Nombre de mes del Excel de Ahorros (ej. "SEPTIEMBRE") -> AAAA-MM: el más reciente que no pase del último mes del tablero.
+function negClaveMes(nombre) {
   const NOM = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
   const ult = months[months.length - 1] || '';
+  const n = NOM.indexOf(String(nombre).trim().toUpperCase()) + 1;
+  if (!n) return null;
+  const y = +ult.slice(0, 4);
+  const k = y + '-' + String(n).padStart(2, '0');
+  return k > ult ? (y - 1) + '-' + String(n).padStart(2, '0') : k;
+}
+function negAhorroPorMes() {
   const out = {};
   const add = m => {
     if (!m || !m.mes || m.monto == null) return;
-    const n = NOM.indexOf(String(m.mes).trim().toUpperCase()) + 1;
-    if (!n) return;
-    let y = +ult.slice(0, 4);
-    let k = y + '-' + String(n).padStart(2, '0');
-    if (k > ult) k = (y - 1) + '-' + String(n).padStart(2, '0');
-    out[k] = m.monto;
+    const k = negClaveMes(m.mes);
+    if (k) out[k] = m.monto;
   };
   Object.values(negHistLoad()).forEach(add);
   ((NEG_DATA.kpis && NEG_DATA.kpis.meses) || []).forEach(add);
   return out;
 }
+// Producto elegido en el filtro de Negociaciones -> sus referencias Siesa (hoja DETALLE del Excel de Ahorros).
+// Si el nombre se repite en el Excel, el filtro lo muestra como "Producto · Proveedor" y se usa ese proveedor.
+function negProductoFiltro(nombre) {
+  const p = NEG_DATA.productos.find(x => x.producto === nombre);
+  if (!p) return null;
+  const sufijo = p.proveedor ? ' · ' + p.proveedor : '';
+  const base = sufijo && nombre.endsWith(sufijo) ? nombre.slice(0, -sufijo.length) : nombre;
+  const norm = x => String(x || '').replace(/\s+/g, ' ').trim().toUpperCase();
+  const refs = new Set((NEG_DATA.refs || []).filter(r => norm(r.producto) === norm(base)
+    && (!sufijo || !r.proveedor || norm(r.proveedor) === norm(p.proveedor))).map(r => r.ref));
+  const neg = {};
+  Object.keys(p.impactoMes || {}).forEach(nm => { const k = negClaveMes(nm); if (k) neg[k] = p.impactoMes[nm]; });
+  return { nombre, refs, neg };
+}
 // Por mes: total comprado (Resumen), ahorro por negociaciones, y alzas/bajas de precio (Precio Unitario vs prom. 3 meses).
-function negImpactoMeses() {
-  const neg = negAhorroPorMes();
+// Con un producto elegido (negProductoFiltro), todo es solo de ese producto: sus compras (valor bruto de sus
+// referencias), su ahorro negociado (hoja DETALLE) y las alzas/bajas de sus referencias.
+function negImpactoMeses(prod) {
+  const neg = prod ? prod.neg : negAhorroPorMes();
   const disp = preciosMesesDisponibles();
+  const MA = PRICE_DATA.months || [];
+  const deProd = x => prod.refs.has(String(x.r || x.referencia || '').trim().toUpperCase());
   const lista = [...new Set(disp.concat(Object.keys(neg)))].filter(m => D.monthlySpend[m] != null).sort();
   return lista.map(m => {
     const cmp = disp.includes(m) ? preciosCompararMes(m) : null;
-    const t = cmp ? preciosTotales(cmp.rows) : null;
-    return { mes: m, compras: (D.monthlySpend[m] || 0) * 1e6, neg: neg[m] != null ? neg[m] : null, t };
+    const rows = cmp ? (prod ? cmp.rows.filter(deProd) : cmp.rows) : null;
+    const t = rows && rows.length ? preciosTotales(rows) : null;
+    const k = MA.indexOf(m);
+    const compras = !prod ? (D.monthlySpend[m] || 0) * 1e6
+      : k < 0 ? 0 : preciosParesPorRef().filter(deProd).reduce((a, x) => a + (x.b[k] || 0), 0);
+    return { mes: m, compras, neg: neg[m] != null ? neg[m] : null, t, rows };
   });
 }
 let NEG_IMP_MES = null;
@@ -4664,9 +4694,13 @@ function renderNegImpacto() {
   const sel = document.getElementById('neg-imp-mes');
   if (!sel) return;
   if (sel.value) NEG_IMP_MES = sel.value;
-  const datos = negImpactoMeses();
+  const fProd = (document.getElementById('neg-f-producto') || {}).value || '';
+  const prod = fProd ? negProductoFiltro(fProd) : null;
+  const datos = negImpactoMeses(prod);
   const kpis = document.getElementById('neg-imp-kpis');
   const note = document.getElementById('neg-imp-note');
+  const titulo = document.querySelector('#neg-imp-kpis') && document.querySelector('#neg-imp-kpis').closest('.chart-card').querySelector('.card-title');
+  if (titulo) titulo.textContent = prod ? 'Ahorro vs. alzas de precio — ' + prod.nombre : 'Ahorro vs. alzas de precio sobre el total de compras del mes';
   destroyChart('ch-neg-impacto');
   if (!datos.length) {
     sel.innerHTML = ''; kpis.innerHTML = '';
@@ -4676,19 +4710,21 @@ function renderNegImpacto() {
   if (!NEG_IMP_MES || !datos.some(d => d.mes === NEG_IMP_MES)) NEG_IMP_MES = datos[datos.length - 1].mes;
   sel.innerHTML = datos.slice().reverse().map(d => `<option value="${d.mes}"${d.mes === NEG_IMP_MES ? ' selected' : ''}>${mesLargoLbl(d.mes)}</option>`).join('');
   const d = datos.find(x => x.mes === NEG_IMP_MES);
-  const pc = v => d.compras ? (v / d.compras * 100).toFixed(2) + '% del total comprado' : '';
+  const pc = v => d.compras ? (v / d.compras * 100).toFixed(2) + (prod ? '% de lo comprado de este producto' : '% del total comprado') : '';
   const t = d.t;
-  const neto = t ? (d.neg || 0) + t.bajaMerc - t.alza : null;
+  const neto = t || (prod && d.neg != null) ? (d.neg || 0) + (t ? t.bajaMerc - t.alza : 0) : null;
   kpis.innerHTML =
-    totCard('var(--wine)', 'Total compras de ' + mesLargoLbl(d.mes), fmtPesos(d.compras), 'valor neto de todas las facturas del mes') +
+    (prod
+      ? totCard('var(--wine)', 'Compras de ' + prod.nombre + ' · ' + mesLargoLbl(d.mes), fmtPesos(d.compras), prod.refs.size ? 'valor bruto de sus referencias (' + [...prod.refs].join(', ') + ')' : 'el Excel de Ahorros no trae la referencia de este producto')
+      : totCard('var(--wine)', 'Total compras de ' + mesLargoLbl(d.mes), fmtPesos(d.compras), 'valor neto de todas las facturas del mes')) +
     totCard('#15803D', 'Ahorro por negociaciones', d.neg != null ? fmtPesos(d.neg) : '—', d.neg != null ? pc(d.neg) : 'el Excel de Ahorros no trae este mes') +
     totCard('#16A34A', '🌦 Bajas de precio por temporada / mercado', t ? fmtPesos(t.bajaMerc) : '—', t ? pc(t.bajaMerc) + ' · ' + t.nBajaMerc + ' ítems sin negociación' : 'sin comparación de precios') +
     totCard('#DC2626', 'Alzas de precio / inflación', t ? fmtPesos(t.alza) : '—', t ? pc(t.alza) + ' · ' + t.nAlza + ' ítems' : 'sin comparación de precios') +
     totCard(neto == null ? 'var(--wine)' : neto >= 0 ? '#16A34A' : '#DC2626', 'Efecto neto de precios', neto == null ? '—' : (neto >= 0 ? 'Ahorro ' : 'Sobrecosto ') + fmtPesos(neto),
       neto == null ? '' : pc(Math.abs(neto)) + ' (negociaciones + bajas por temporada − alzas)');
   // Clic en cada tarjeta: mismo despliegue de "de dónde sale" que Precio Unitario / Precio por Ítem.
-  const cmpDet = t ? preciosCompararMes(d.mes) : null;
-  PRECIOS_DET_CTX['neg-imp-kpis'] = cmpDet ? { mes: d.mes, rows: cmpDet.rows, usarFiltros: false } : null;
+  const cmpDet = t ? { rows: d.rows } : null;
+  PRECIOS_DET_CTX['neg-imp-kpis'] = cmpDet ? { mes: d.mes, rows: cmpDet.rows, usarFiltros: false, prod } : null;
   if (cmpDet) ['comp', 'neg', 'temp', 'alza', 'neto'].forEach((tipo, i) => {
     const card = kpis.children[i];
     if (!card) return;
@@ -4700,7 +4736,10 @@ function renderNegImpacto() {
   note.textContent = 'ⓘ El ahorro por negociaciones viene del Excel de Ahorros. Las bajas por temporada / mercado y las alzas comparan lo pagado '
     + 'en el mes con lo que hubiera costado al precio promedio de los 3 meses anteriores, por proveedor e ítem (mismo cálculo de Precio Unitario); '
     + 'de las bajas se excluyen las referencias con precio negociado vigente (columnas Referencia y Fecha inicio del Excel de Ahorros), '
-    + 'para no contar dos veces el mismo ahorro.';
+    + 'para no contar dos veces el mismo ahorro.'
+    + (prod ? ' Con un producto elegido en el filtro, todo es solo de ese producto: sus compras (valor bruto de sus referencias), '
+      + 'su ahorro negociado (hoja DETALLE, solo los meses que trae el Excel) y las alzas / bajas de sus referencias; '
+      + 'los % son sobre lo comprado de ese producto en el mes.' : '');
 
   const ult = datos.slice(-12);
   const pct = (v, x) => v != null && x.compras ? +(v / x.compras * 100).toFixed(2) : null;
@@ -4718,7 +4757,7 @@ function renderNegImpacto() {
     options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: true, position: 'bottom' },
       tooltip: { ...TOOLTIP_BASE, callbacks: { label: c => c.dataset.label + ': ' + c.raw + '% · ' + fmtPesos(c.dataset._v[c.dataIndex] || 0) } } },
       scales: { ...baseOpts.scales, y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => v + '%' },
-        title: { display: true, text: '% del total comprado en el mes' } } } }
+        title: { display: true, text: prod ? '% de lo comprado del producto en el mes' : '% del total comprado en el mes' } } } }
   });
 }
 
