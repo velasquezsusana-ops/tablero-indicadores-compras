@@ -5997,6 +5997,9 @@ function actualizarParsePrecios(wbXlsb, histRows, prevPriceData, wbHist) {
       if (bruto) { pairAjuste[key] = pairAjuste[key] || {}; pairAjuste[key][keyMonth] = (pairAjuste[key][keyMonth] || 0) + bruto; }
       return;
     }
+    // Entradas sin costo (valor $0, ej. motivo 401-99): son muestras o reposiciones de novedades, no compras.
+    // Compras pidió no sumarlas: su cantidad bajaría el precio del mes (nov-2026).
+    if (cant > 0 && bruto === 0) return;
     if (last4.includes(keyMonth)) pairTotalRecent[key] = (pairTotalRecent[key] || 0) + bruto;
     pairRef[key] = ref;
     if (!pairNameMes[key] || keyMonth >= pairNameMes[key]) { pairName[key] = [prov, item]; pairNameMes[key] = keyMonth; }
