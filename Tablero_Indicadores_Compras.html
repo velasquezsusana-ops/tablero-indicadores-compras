@@ -582,7 +582,7 @@ footer strong { color: rgba(255,255,255,0.8); }
   <button class="sec-tab" onclick="setTab('hist-oc',this)" role="tab">📋 Órdenes Completas</button>
   <button class="sec-tab" onclick="setTab('det-oc',this)" role="tab">📊 Detalle OC</button>
   <button class="sec-tab olive-tab" onclick="setTab('ajustes',this)" role="tab">🔧 Ajustes Inventario</button>
-  <button class="sec-tab olive-tab" onclick="setTab('devoluciones',this)" role="tab">↩️ Devoluciones</button>
+  <button class="sec-tab olive-tab" onclick="setTab('devoluciones',this)" role="tab">🚫 OC Anuladas</button>
   <button class="sec-tab olive-tab" onclick="setTab('mermas',this)" role="tab">⚠️ Transferencias / Mermas</button>
 <button class="sec-tab" onclick="setTab('envios',this)" role="tab">🚚 Envíos a PDV vs Pedidos</button>
 <button class="sec-tab" onclick="setTab('novedades',this)" role="tab">🧪 Novedades de Calidad</button>
@@ -1411,25 +1411,21 @@ footer strong { color: rgba(255,255,255,0.8); }
 
 <!-- ══ TAB DEVOLUCIONES ══ -->
 <section id="tab-devoluciones" class="tab-panel">
-  <h2 class="olive-section-title">Órdenes Anuladas / Devoluciones</h2>
+  <h2 class="olive-section-title">OC Anuladas</h2>
+  <p class="card-sub" style="margin:-.5rem 0 1rem">Líneas con Estado “Anulado” en Orden de compra por item.</p>
   <div class="hero-grid" id="devoluciones-kpis"></div>
 
-  <div class="chart-grid-3">
+  <div class="chart-grid-2">
     <div class="chart-card">
-      <div class="card-title" style="color:var(--olive)">Motivo de Devolución</div>
-      <div class="card-sub">Ajuste por cantidad vs ajuste por precio</div>
-      <div class="chart-wrap" style="height:240px"><canvas id="ch-dev-motivo"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="card-title" style="color:var(--olive)">Devoluciones por Sitio</div>
-      <div class="card-sub">Total de devoluciones por punto de venta</div>
+      <div class="card-title" style="color:var(--olive)">OC anuladas por proveedor</div>
+      <div class="card-sub">Número de líneas de OC anuladas por proveedor</div>
       <div class="donut-wrap" style="height:240px; position:relative">
         <canvas id="ch-dev-sitio" style="height:240px"></canvas>
       </div>
     </div>
     <div class="chart-card">
       <div class="card-title" style="color:var(--olive)">Cantidad por Ítem</div>
-      <div class="card-sub">Ítems más frecuentes en devoluciones</div>
+      <div class="card-sub">Ítems más frecuentes en OC anuladas (número de líneas)</div>
       <div style="overflow-y:auto; max-height:240px">
         <table class="data-table olive" id="dev-items-table">
           <thead><tr><th>Ítem</th><th>UM</th><th>Cantidad</th></tr></thead>
@@ -1442,12 +1438,12 @@ footer strong { color: rgba(255,255,255,0.8); }
   <div class="chart-grid-2">
     <div class="chart-card">
       <div class="card-title" style="color:var(--olive)">Costo por Proveedor</div>
-      <div class="card-sub">Valor de devoluciones por proveedor (COP)</div>
+      <div class="card-sub">Valor de las OC anuladas por proveedor (COP)</div>
       <div class="chart-wrap" style="height:260px"><canvas id="ch-dev-proveedor"></canvas></div>
     </div>
     <div class="chart-card">
-      <div class="card-title" style="color:var(--olive)">Devoluciones por Mes</div>
-      <div class="card-sub">Evolución mensual del número de devoluciones</div>
+      <div class="card-title" style="color:var(--olive)">OC anuladas por mes</div>
+      <div class="card-sub">Evolución mensual del número de líneas de OC anuladas</div>
       <div class="chart-wrap" style="height:260px"><canvas id="ch-dev-mes"></canvas></div>
     </div>
   </div>
@@ -5195,7 +5191,7 @@ function renderAjustesTab() { renderAjustesKPIs(); renderAjustesCharts(); }
 // ══════════════════════════════════════════════════════════════════════════
 function renderDevolucionesKPIs() {
   const d = DA.devoluciones;
-  let monto = d.montoTotal, totalLbl = d.total, periodoSub = 'Registros del período';
+  let monto = d.montoTotal, totalLbl = d.total, periodoSub = 'Líneas de OC con estado Anulado';
   // Filtro proveedor
   if (filterProvs.length) {
     const matched = d.costoProv.filter(x => matchAnyName(filterProvs, x[0]));
@@ -5212,7 +5208,7 @@ function renderDevolucionesKPIs() {
   el.innerHTML = filterNoteHtml(true, true, true) + `
     <div class="kpi-card olive-feat">
       <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/></svg></div>
-      <div class="kpi-label">Total Devoluciones</div>
+      <div class="kpi-label">Total OC anuladas</div>
       <div class="kpi-val">${totalLbl}</div>
       <div class="kpi-sub">${periodoSub}</div>
       <div class="kpi-pill olive-badge">${filterMeses.length||filterAnios.length?'Período filtrado':'Histórico'}</div>
@@ -5221,7 +5217,7 @@ function renderDevolucionesKPIs() {
       <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
       <div class="kpi-label">Monto Total</div>
       <div class="kpi-val">${monto > 0 ? fmtM(monto) : '–'}</div>
-      <div class="kpi-sub">Valor en devoluciones registradas</div>
+      <div class="kpi-sub">Valor de las OC anuladas</div>
       <div class="kpi-pill olive-badge">COP</div>
     </div>`;
 }
@@ -5243,21 +5239,7 @@ function renderDevolucionesCharts() {
     mesData = filterMeses.map(m => { const mi = parseInt(m.split('-')[1],10)-1; return d.porMes[mi] || ['–',0]; });
   }
 
-  const motivoAnu = (() => {
-    const idxs = dateIdxs();
-    if (idxs.length) return sumIdxs(DN.histOC.anuladas_mes, idxs);
-    return d.motivos[0][1];
-  })();
-  destroyChart('ch-dev-motivo');
-  charts['ch-dev-motivo'] = new Chart(document.getElementById('ch-dev-motivo'), {
-    type:'bar',
-    data:{labels:['OC Anuladas'],datasets:[{label:'Cantidad',data:[motivoAnu],
-      backgroundColor:['#B4B68A'],borderRadius:4}]},
-    options:{...baseOptsOlive,plugins:{...baseOptsOlive.plugins,legend:{display:false},
-      tooltip:{...TOOLTIP_OLIVE,callbacks:{label:c=>c.raw + ' devoluciones'}}}}
-  });
-
-  // Sitio: filtrar por proveedor si coincide
+  // OC anuladas por proveedor (número de líneas)
   let sitioData = d.porSitio;
   if (filterProvs.length) { const m = sitioData.filter(x=>matchAnyName(filterProvs,x[0])); if (m.length) sitioData=m; }
   destroyChart('ch-dev-sitio');
@@ -5267,7 +5249,7 @@ function renderDevolucionesCharts() {
       backgroundColor:OLIVE_PALETTE,borderWidth:2,borderColor:'#fff'}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
       plugins:{legend:{position:'right',labels:{color:'#7A6B72',font:{family:'Lato',size:10},boxWidth:12}},
-        tooltip:{...TOOLTIP_OLIVE,callbacks:{label:c=>c.label+': '+c.raw+' dev.'}}}}
+        tooltip:{...TOOLTIP_OLIVE,callbacks:{label:c=>c.label+': '+c.raw+' líneas anuladas'}}}}
   });
 
   destroyChart('ch-dev-proveedor');
@@ -5284,10 +5266,10 @@ function renderDevolucionesCharts() {
   destroyChart('ch-dev-mes');
   charts['ch-dev-mes'] = new Chart(document.getElementById('ch-dev-mes'), {
     type:'bar',
-    data:{labels:mesData.map(x=>x[0]),datasets:[{label:'# Devoluciones',data:mesData.map(x=>x[1]),
+    data:{labels:mesData.map(x=>x[0]),datasets:[{label:'# OC anuladas',data:mesData.map(x=>x[1]),
       backgroundColor:'#A5C47A',borderRadius:4}]},
     options:{...baseOptsOlive,plugins:{...baseOptsOlive.plugins,legend:{display:false},
-      tooltip:{...TOOLTIP_OLIVE,callbacks:{label:c=>c.raw + ' devoluciones'}}}}
+      tooltip:{...TOOLTIP_OLIVE,callbacks:{label:c=>c.raw + ' líneas anuladas'}}}}
   });
 
   document.getElementById('dev-items-tbody').innerHTML = itemsData.map(r =>
@@ -7274,7 +7256,7 @@ async function actualizarPublicar(silent) {
   }
 
   // Histórico + Orden de compra + Salidas de inventario -> Resumen Ejecutivo, Tendencias,
-  // Proveedores, Ítems, Ajustes, Devoluciones, Mermas, Órdenes Completas, Detalle OC
+  // Proveedores, Ítems, Ajustes, OC Anuladas, Mermas, Órdenes Completas, Detalle OC
   // (necesita los tres archivos juntos)
   if (actualizarTemp['historico'] && actualizarTemp['orden'] && actualizarTemp['salidas']) {
     try {
@@ -7294,7 +7276,7 @@ async function actualizarPublicar(silent) {
       populateFilters();
       document.getElementById('filter-info').textContent =
         D.totalFacturas.toLocaleString('es-CO') + ' facturas · ' + D.totalProveedores + ' proveedores · ' + D.totalItems + ' ítems';
-      actualizados.push('Resumen Ejecutivo, Tendencias, Proveedores, Ítems, Ajustes, Devoluciones, Mermas, Órdenes Completas, Detalle OC');
+      actualizados.push('Resumen Ejecutivo, Tendencias, Proveedores, Ítems, Ajustes, OC Anuladas, Mermas, Órdenes Completas, Detalle OC');
     } catch (err) { pendientes.push('Resumen Ejecutivo y demás (' + err.message + ')'); }
   } else if (actualizarTemp['historico'] || actualizarTemp['orden'] || actualizarTemp['salidas']) {
     pendientes.push('Resumen Ejecutivo y demás (necesita "Histórico de compras", "Orden de compra" y "Salidas de inventario" juntos)');
