@@ -582,8 +582,7 @@ footer strong { color: rgba(255,255,255,0.8); }
   <button class="sec-tab" onclick="setTab('hist-oc',this)" role="tab">📋 Órdenes Completas</button>
   <button class="sec-tab" onclick="setTab('det-oc',this)" role="tab">📊 Detalle OC</button>
   <button class="sec-tab olive-tab" onclick="setTab('ajustes',this)" role="tab">🔧 Ajustes Inventario</button>
-  <button class="sec-tab olive-tab" onclick="setTab('devoluciones',this)" role="tab">🚫 OC Anuladas</button>
-  <button class="sec-tab olive-tab" onclick="setTab('dev-prov',this)" role="tab">↩️ Devoluciones a proveedor</button>
+  <button class="sec-tab olive-tab" onclick="setTab('devoluciones',this)" role="tab">↩️ Devoluciones</button>
   <button class="sec-tab olive-tab" onclick="setTab('mermas',this)" role="tab">⚠️ Transferencias / Mermas</button>
 <button class="sec-tab" onclick="setTab('envios',this)" role="tab">🚚 Envíos a PDV vs Pedidos</button>
 <button class="sec-tab" onclick="setTab('novedades',this)" role="tab">🧪 Novedades de Calidad</button>
@@ -1412,46 +1411,6 @@ footer strong { color: rgba(255,255,255,0.8); }
 
 <!-- ══ TAB DEVOLUCIONES ══ -->
 <section id="tab-devoluciones" class="tab-panel">
-  <h2 class="olive-section-title">OC Anuladas</h2>
-  <p class="card-sub" style="margin:-.5rem 0 1rem">Líneas con Estado “Anulado” en Orden de compra por item.</p>
-  <div class="hero-grid" id="devoluciones-kpis"></div>
-
-  <div class="chart-grid-2">
-    <div class="chart-card">
-      <div class="card-title" style="color:var(--olive)">OC anuladas por proveedor</div>
-      <div class="card-sub">Número de líneas de OC anuladas por proveedor</div>
-      <div class="donut-wrap" style="height:240px; position:relative">
-        <canvas id="ch-dev-sitio" style="height:240px"></canvas>
-      </div>
-    </div>
-    <div class="chart-card">
-      <div class="card-title" style="color:var(--olive)">Cantidad por Ítem</div>
-      <div class="card-sub">Ítems más frecuentes en OC anuladas (número de líneas)</div>
-      <div style="overflow-y:auto; max-height:240px">
-        <table class="data-table olive" id="dev-items-table">
-          <thead><tr><th>Ítem</th><th>UM</th><th>Cantidad</th></tr></thead>
-          <tbody id="dev-items-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div class="chart-grid-2">
-    <div class="chart-card">
-      <div class="card-title" style="color:var(--olive)">Costo por Proveedor</div>
-      <div class="card-sub">Valor de las OC anuladas por proveedor (COP)</div>
-      <div class="chart-wrap" style="height:260px"><canvas id="ch-dev-proveedor"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="card-title" style="color:var(--olive)">OC anuladas por mes</div>
-      <div class="card-sub">Evolución mensual del número de líneas de OC anuladas</div>
-      <div class="chart-wrap" style="height:260px"><canvas id="ch-dev-mes"></canvas></div>
-    </div>
-  </div>
-</section>
-
-<!-- ══ TAB DEVOLUCIONES A PROVEEDOR ══ -->
-<section id="tab-dev-prov" class="tab-panel">
   <h2 class="olive-section-title">Devoluciones a proveedor</h2>
   <p class="card-sub" style="margin:-.5rem 0 1rem">Filas con cantidad negativa en Histórico de compras por item (notas de devolución, motivos 402-xx). Valores en positivo = lo devuelto. Ya están descontadas del gasto neto del Resumen y de Proveedores.</p>
   <div class="hero-grid" id="dvp-kpis"></div>
@@ -1498,6 +1457,43 @@ footer strong { color: rgba(255,255,255,0.8); }
       </table>
     </div>
   </div>
+
+  <h2 class="olive-section-title" style="margin-top:2rem">OC Anuladas</h2>
+  <p class="card-sub" style="margin:-.5rem 0 1rem">Líneas con Estado “Anulado” en Orden de compra por item.</p>
+  <div class="hero-grid" id="devoluciones-kpis"></div>
+
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="card-title" style="color:var(--olive)">OC anuladas por proveedor</div>
+      <div class="card-sub">Número de líneas de OC anuladas por proveedor</div>
+      <div class="donut-wrap" style="height:240px; position:relative">
+        <canvas id="ch-dev-sitio" style="height:240px"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="card-title" style="color:var(--olive)">Cantidad por Ítem</div>
+      <div class="card-sub">Ítems más frecuentes en OC anuladas (número de líneas)</div>
+      <div style="overflow-y:auto; max-height:240px">
+        <table class="data-table olive" id="dev-items-table">
+          <thead><tr><th>Ítem</th><th>UM</th><th>Cantidad</th></tr></thead>
+          <tbody id="dev-items-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="card-title" style="color:var(--olive)">Costo por Proveedor</div>
+      <div class="card-sub">Valor de las OC anuladas por proveedor (COP)</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="ch-dev-proveedor"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-title" style="color:var(--olive)">OC anuladas por mes</div>
+      <div class="card-sub">Evolución mensual del número de líneas de OC anuladas</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="ch-dev-mes"></canvas></div>
+    </div>
+  </div>
 </section>
 
 <!-- ══ TAB MERMAS ══ -->
@@ -1513,17 +1509,17 @@ footer strong { color: rgba(255,255,255,0.8); }
     </div>
     <div class="chart-card">
       <div class="card-title" style="color:var(--olive)">Cantidad por Ítem</div>
-      <div class="card-sub">Ítems con mayor volumen en mermas (unidades)</div>
+      <div class="card-sub">Cantidad de los 10 ítems con mayor costo, en la unidad de cada ítem</div>
       <div class="chart-wrap" style="height:280px"><canvas id="ch-mermas-item-cant"></canvas></div>
     </div>
     <div class="chart-card">
       <div class="card-title" style="color:var(--olive)">Mermas por Bodega Destino</div>
-      <div class="card-sub">Distribución de mermas por punto de destino</div>
+      <div class="card-sub">Costo de las mermas por punto de destino (COP)</div>
       <div class="donut-wrap" style="height:280px; position:relative">
         <canvas id="ch-mermas-bodega" style="height:280px"></canvas>
         <div class="donut-center">
-          <div class="donut-center-val" id="mermas-donut-val">383K</div>
-          <div class="donut-center-label">Total Mermas</div>
+          <div class="donut-center-val" id="mermas-donut-val">–</div>
+          <div class="donut-center-label">Costo mermas</div>
         </div>
       </div>
     </div>
@@ -1531,8 +1527,8 @@ footer strong { color: rgba(255,255,255,0.8); }
 
   <div class="chart-grid-1">
     <div class="chart-card">
-      <div class="card-title" style="color:var(--olive)">Histórico de Movimientos de Mermas — 2025 vs 2026</div>
-      <div class="card-sub">Evolución mensual del total de mermas (cantidad)</div>
+      <div class="card-title" style="color:var(--olive)">Histórico de Mermas en Pesos — 2025 vs 2026</div>
+      <div class="card-sub">Costo mensual de las mermas (COP)</div>
       <div class="chart-wrap" style="height:240px"><canvas id="ch-mermas-historico"></canvas></div>
     </div>
   </div>
@@ -4947,8 +4943,7 @@ function renderTabCharts(tab) {
     case 'precio-item':   renderPrecioItemTab(); break;
     case 'negociaciones': renderNegociacionesTab(); break;
     case 'ajustes':       renderAjustesTab(); break;
-    case 'devoluciones':  renderDevolucionesTab(); break;
-    case 'dev-prov':      renderDevProvTab(); break;
+    case 'devoluciones':  renderDevProvTab(); renderDevolucionesTab(); break;
     case 'mermas':        renderMermasTab(); break;
     case 'hist-oc':       renderHistOCTab(); break;
     case 'det-oc':        renderDetOCTab(); break;
@@ -5441,103 +5436,105 @@ function renderDevProvTab() {
 // ══════════════════════════════════════════════════════════════════════════
 // RENDER — MERMAS / TRANSFERENCIAS
 // ══════════════════════════════════════════════════════════════════════════
+// Movimientos de MERMAS_DETALLE que cumplen los filtros de Año/Mes, Ítem y Bodega (combinados con AND).
+// Tarjetas, gráficas y detalle de la pestaña salen de estas mismas filas.
+function mermasFiltradas() {
+  const md = MERMAS_DETALLE || { it: [], bo: [], bd: [], um: [], mo: [], r: [] };
+  const itemOk = filterItems.length ? md.it.map(n => matchAnyName(filterItems, n)) : null;
+  const boOk = filterBodegas.length ? md.bo.map(b => filterBodegas.includes(b[0])) : null;
+  const idxs = dateIdxs();
+  const mesOk = idxs.length ? new Set(idxs.map(i => { const [y, mm] = months[i].split('-'); return (Number(y) % 100) * 100 + Number(mm); })) : null;
+  return md.r.filter(x => (!itemOk || itemOk[x[1]]) && (!boOk || boOk[x[2]]) && (!mesOk || mesOk.has(Math.floor(x[0] / 100))));
+}
+
 function renderMermasKPIs() {
-  const m = DA.mermas;
-  // Si hay filtro de ítem, calcular mermas de ese ítem
-  let totalMermas = m.totalMermas, totalLbl = m.totalMermas.toLocaleString('es-CO');
-  let costoLbl = '';
-  if (filterItems.length) {
-    const ci = m.costoItem.filter(x => matchAnyName(filterItems, x[0]));
-    const qi = m.cantItem.filter(x => matchAnyName(filterItems, x[0]));
-    if (ci.length) costoLbl = ' · Costo: ' + fmtM(ci.reduce((s,x)=>s+x[1],0));
-    if (qi.length) totalLbl = qi.reduce((s,x)=>s+x[1],0).toLocaleString('es-CO');
-  }
-  // Si hay filtro de año y/o mes, sumar el histórico solo sobre los meses activos
-  const idxsMermas = dateIdxs();
-  if (idxsMermas.length) {
-    totalMermas = idxsMermas.reduce((s,i) => {
-      const key = FILTER.months[i], yr = key.split('-')[0], mi = parseInt(key.split('-')[1],10)-1;
-      return s + ((yr==='2025'?m.hist2025:m.hist2026)[mi]||0);
-    }, 0);
-    totalLbl = totalMermas.toLocaleString('es-CO');
-  }
+  const rows = mermasFiltradas();
+  const costo = rows.reduce((s, x) => s + x[7], 0);
+  const nOrigen = new Set(rows.map(x => x[2])).size, nDestino = new Set(rows.map(x => x[3])).size;
+  const filtrado = filterAnios.length || filterMeses.length || filterItems.length || filterBodegas.length;
   const el = document.getElementById('mermas-kpis');
   el.innerHTML = filterNoteHtml(false, true, true) + `
     <div class="kpi-card olive-feat">
       <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
-      <div class="kpi-label">Total Mermas${filterAnios.length?' ('+anioLabel()+')':''}</div>
-      <div class="kpi-val">${totalLbl}</div>
-      <div class="kpi-sub">Movimientos de merma registrados${costoLbl}</div>
-      <div class="kpi-pill olive-badge">${filterItems.length?'Ítem filtrado':'Cantidad total'}</div>
+      <div class="kpi-label">Costo Total Mermas${filterAnios.length?' ('+anioLabel()+')':''}</div>
+      <div class="kpi-val">${fmtM(Math.round(costo))}</div>
+      <div class="kpi-sub">${rows.length.toLocaleString('es-CO')} movimientos de merma</div>
+      <div class="kpi-pill olive-badge">${filtrado ? 'Filtrado' : 'Histórico'}</div>
     </div>
     <div class="kpi-card olive">
       <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg></div>
       <div class="kpi-label">Bodegas Origen</div>
-      <div class="kpi-val">${m.bodegasOrigen}</div>
+      <div class="kpi-val">${nOrigen}</div>
       <div class="kpi-sub">Puntos de salida de mermas</div>
       <div class="kpi-pill olive-badge">Origen</div>
     </div>
     <div class="kpi-card olive">
       <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg></div>
       <div class="kpi-label">Bodegas Destino</div>
-      <div class="kpi-val">${m.bodegasDestino}</div>
+      <div class="kpi-val">${nDestino}</div>
       <div class="kpi-sub">Puntos de recepción de mermas</div>
       <div class="kpi-pill olive-badge">Destino</div>
     </div>`;
 }
 
 function renderMermasCharts() {
-  const m = DA.mermas;
+  const md = MERMAS_DETALLE || { it: [], bo: [], bd: [], um: [], mo: [], r: [] };
+  const rows = mermasFiltradas();
+  const corto = t => t.length > 20 ? t.slice(0, 18) + '…' : t;
 
-  // Filtrar por ítem
-  let costoData = m.costoItem, cantData = m.cantItem;
-  if (filterItems.length) {
-    const fc = m.costoItem.filter(x=>matchAnyName(filterItems,x[0]));
-    const fq = m.cantItem.filter(x=>matchAnyName(filterItems,x[0]));
-    if (fc.length) costoData=fc;
-    if (fq.length) cantData=fq;
-  }
+  // Costo y cantidad por ítem (+UM: la cantidad solo se suma dentro de la misma unidad)
+  const porItem = new Map();
+  rows.forEach(x => { const k = x[1] + '|' + x[4]; const a = porItem.get(k) || { it: md.it[x[1]] || '', um: md.um[x[4]] || '', c: 0, q: 0 }; a.c += x[7]; a.q += x[6]; porItem.set(k, a); });
+  const top = [...porItem.values()].sort((a, b) => b.c - a.c).slice(0, 10);
 
   destroyChart('ch-mermas-item-costo');
   charts['ch-mermas-item-costo'] = new Chart(document.getElementById('ch-mermas-item-costo'), {
     type:'bar',
-    data:{labels:costoData.map(x=>x[0].length>20?x[0].slice(0,18)+'…':x[0]),
-      datasets:[{label:'Costo (COP)',data:costoData.map(x=>x[1]),
-        backgroundColor:costoData.map(x=>matchAnyName(filterItems,x[0])&&filterItems.length?COLORS.olive:'#7D8135'),borderRadius:4}]},
+    data:{labels:top.map(a=>corto(a.it)),
+      datasets:[{label:'Costo (COP)',data:top.map(a=>Math.round(a.c)),backgroundColor:'#7D8135',borderRadius:4}]},
     options:{...baseOptsOlive,indexAxis:'y',plugins:{...baseOptsOlive.plugins,legend:{display:false},
-      tooltip:{...TOOLTIP_OLIVE,callbacks:{label:c=>fmtM(c.raw)}}},
+      tooltip:{...TOOLTIP_OLIVE,callbacks:{title:c=>top[c[0].dataIndex].it,label:c=>fmtM(c.raw)}}},
       scales:{...baseOptsOlive.scales,x:{...baseOptsOlive.scales.x,ticks:{...baseOptsOlive.scales.x.ticks,callback:v=>fmtM(v)}}}}
   });
 
   destroyChart('ch-mermas-item-cant');
   charts['ch-mermas-item-cant'] = new Chart(document.getElementById('ch-mermas-item-cant'), {
     type:'bar',
-    data:{labels:cantData.map(x=>x[0].length>20?x[0].slice(0,18)+'…':x[0]),
-      datasets:[{label:'Cantidad',data:cantData.map(x=>x[1]),
-        backgroundColor:cantData.map(x=>matchAnyName(filterItems,x[0])&&filterItems.length?COLORS.olive:'#B4B68A'),borderRadius:4}]},
+    data:{labels:top.map(a=>corto(a.it) + ' (' + a.um + ')'),
+      datasets:[{label:'Cantidad',data:top.map(a=>Math.round(a.q*100)/100),backgroundColor:'#B4B68A',borderRadius:4}]},
     options:{...baseOptsOlive,indexAxis:'y',plugins:{...baseOptsOlive.plugins,legend:{display:false},
-      tooltip:{...TOOLTIP_OLIVE,callbacks:{label:c=>c.raw.toLocaleString('es-CO')}}},
-      scales:{...baseOptsOlive.scales,x:{...baseOptsOlive.scales.x,ticks:{...baseOptsOlive.scales.x.ticks,callback:v=>v.toLocaleString()}}}}
+      tooltip:{...TOOLTIP_OLIVE,callbacks:{title:c=>top[c[0].dataIndex].it,label:c=>c.raw.toLocaleString('es-CO')+' '+top[c.dataIndex].um}}},
+      scales:{...baseOptsOlive.scales,x:{...baseOptsOlive.scales.x,ticks:{...baseOptsOlive.scales.x.ticks,callback:v=>v.toLocaleString('es-CO')}}}}
   });
 
+  // Bodega destino: 7 principales + "Otras", para que el centro (total) sea la suma de la gráfica
+  const porDest = new Map();
+  rows.forEach(x => porDest.set(x[3], (porDest.get(x[3]) || 0) + x[7]));
+  let dest = [...porDest.entries()].map(([k, v]) => [md.bd[k] || '', v]).sort((a, b) => b[1] - a[1]);
+  if (dest.length > 8) dest = dest.slice(0, 7).concat([['Otras', dest.slice(7).reduce((s, x) => s + x[1], 0)]]);
+  const totalDest = dest.reduce((s, x) => s + x[1], 0);
   destroyChart('ch-mermas-bodega');
   charts['ch-mermas-bodega'] = new Chart(document.getElementById('ch-mermas-bodega'), {
     type:'doughnut',
-    data:{labels:m.bodegaDest.map(x=>x[0]),datasets:[{data:m.bodegaDest.map(x=>x[1]),
-      backgroundColor:OLIVE_PALETTE,borderWidth:2,borderColor:'#fff'}]},
+    data:{labels:dest.map(x=>x[0]),datasets:[{data:dest.map(x=>Math.round(x[1])),
+      backgroundColor:OLIVE_PALETTE.concat(['#D9D6C3']),borderWidth:2,borderColor:'#fff'}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
       plugins:{legend:{position:'right',labels:{color:'#7A6B72',font:{family:'Lato',size:10},boxWidth:12}},
-        tooltip:{...TOOLTIP_OLIVE,callbacks:{label:c=>c.label+': '+c.raw.toLocaleString('es-CO')}}}}
+        tooltip:{...TOOLTIP_OLIVE,callbacks:{label:c=>c.label+': '+fmtM(c.raw)+(totalDest?' ('+(c.raw/totalDest*100).toFixed(1)+'%)':'')}}}}
   });
+  document.getElementById('mermas-donut-val').textContent = fmtM(Math.round(totalDest));
 
-  // Histórico con filtro de año/mes
-  const {datasets:ds_m, labels:lbl_m} = buildYearDatasets(m.hist2025, m.hist2026, 'rgba(125,129,53,0.7)', 'rgba(165,196,122,0.85)');
+  // Histórico en pesos por mes (2025 vs 2026)
+  const h25 = Array(12).fill(0), h26 = Array(12).fill(0);
+  rows.forEach(x => { const yy = Math.floor(x[0] / 10000), mi = Math.floor(x[0] / 100) % 100 - 1; if (yy === 25) h25[mi] += x[7]; else if (yy === 26) h26[mi] += x[7]; });
+  const {datasets:ds_m, labels:lbl_m} = buildYearDatasets(h25.map(Math.round), h26.map(Math.round), 'rgba(125,129,53,0.7)', 'rgba(165,196,122,0.85)');
   destroyChart('ch-mermas-historico');
   charts['ch-mermas-historico'] = new Chart(document.getElementById('ch-mermas-historico'), {
     type:'bar',
     data:{labels:lbl_m, datasets:ds_m},
     options:{...baseOptsOlive,plugins:{...baseOptsOlive.plugins,
-      tooltip:{...TOOLTIP_OLIVE,callbacks:{label:c=>c.dataset.label+': '+c.raw.toLocaleString('es-CO')}}}}
+      tooltip:{...TOOLTIP_OLIVE,callbacks:{label:c=>c.dataset.label+': '+fmtM(c.raw)}}},
+      scales:{...baseOptsOlive.scales,y:{...baseOptsOlive.scales.y,ticks:{...baseOptsOlive.scales.y.ticks,callback:v=>fmtM(v)}}}}
   });
 
   renderMermasDetalle();
@@ -5550,19 +5547,9 @@ const MERMAS_DET_MAX = 500;
 function renderMermasDetalle() {
   const md = MERMAS_DETALLE || { it: [], bo: [], bd: [], um: [], mo: [], r: [] };
   const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const itemOk = filterItems.length ? md.it.map(n => matchAnyName(filterItems, n)) : null;
-  const boOk = filterBodegas.length ? md.bo.map(b => filterBodegas.includes(b[0])) : null;
-  const idxs = dateIdxs();
-  const mesOk = idxs.length ? new Set(idxs.map(i => { const [y, mm] = months[i].split('-'); return (Number(y) % 100) * 100 + Number(mm); })) : null;
-  let n = 0, costo = 0;
-  const vis = [];
-  md.r.forEach(x => {
-    if (itemOk && !itemOk[x[1]]) return;
-    if (boOk && !boOk[x[2]]) return;
-    if (mesOk && !mesOk.has(Math.floor(x[0] / 100))) return;
-    n++; costo += x[7];
-    if (vis.length < MERMAS_DET_MAX) vis.push(x);
-  });
+  const rows = mermasFiltradas();
+  const n = rows.length, costo = rows.reduce((s, x) => s + x[7], 0);
+  const vis = rows.slice(0, MERMAS_DET_MAX);
   const fecha = d => '20' + String(d).slice(0, 2) + '-' + String(d).slice(2, 4) + '-' + String(d).slice(4, 6);
   const tbody = document.getElementById('mermas-detalle-tbody');
   tbody.innerHTML = vis.length ? vis.map(x => {
@@ -7436,7 +7423,7 @@ async function actualizarPublicar(silent) {
   }
 
   // Histórico + Orden de compra + Salidas de inventario -> Resumen Ejecutivo, Tendencias,
-  // Proveedores, Ítems, Ajustes, OC Anuladas, Mermas, Órdenes Completas, Detalle OC
+  // Proveedores, Ítems, Ajustes, Devoluciones (OC anuladas), Mermas, Órdenes Completas, Detalle OC
   // (necesita los tres archivos juntos)
   if (actualizarTemp['historico'] && actualizarTemp['orden'] && actualizarTemp['salidas']) {
     try {
@@ -7456,7 +7443,7 @@ async function actualizarPublicar(silent) {
       populateFilters();
       document.getElementById('filter-info').textContent =
         D.totalFacturas.toLocaleString('es-CO') + ' facturas · ' + D.totalProveedores + ' proveedores · ' + D.totalItems + ' ítems';
-      actualizados.push('Resumen Ejecutivo, Tendencias, Proveedores, Ítems, Ajustes, OC Anuladas, Mermas, Órdenes Completas, Detalle OC');
+      actualizados.push('Resumen Ejecutivo, Tendencias, Proveedores, Ítems, Ajustes, Devoluciones (OC anuladas), Mermas, Órdenes Completas, Detalle OC');
     } catch (err) { pendientes.push('Resumen Ejecutivo y demás (' + err.message + ')'); }
   } else if (actualizarTemp['historico'] || actualizarTemp['orden'] || actualizarTemp['salidas']) {
     pendientes.push('Resumen Ejecutivo y demás (necesita "Histórico de compras", "Orden de compra" y "Salidas de inventario" juntos)');
