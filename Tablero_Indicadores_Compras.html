@@ -5890,7 +5890,7 @@ function initSortableTables() {
 // ══════════════════════════════════════════════════════════════════════════
 const ACTUALIZAR_FILES = [
   { id: 'ahorros',   label: 'Ahorros a Septiembre',            filename: 'AHORROS A SEPT.xlsx',              desc: 'Hoja "RESUMEN" — alimenta la pestaña Negociaciones (ahorros por producto).' },
-  { id: 'picking',   label: 'Diferencia de pedidos',           filename: 'dif pedidos.xlsx',                 desc: 'Pedidos vs. lo enviado a cada punto de venta (Siesa). Suma las fechas del archivo al histórico, sin borrar lo anterior. También acepta el antiguo dif picking.' },
+  { id: 'picking',   label: 'Diferencia de pedidos',           filename: 'dif pedidos.xlsx', alias: ['dif picking.xlsx'], desc: 'Pedidos vs. lo enviado a cada punto de venta (Siesa). Suma las fechas del archivo al histórico, sin borrar lo anterior. También se puede llamar "dif picking.xlsx" (el mismo archivo que usa Producción).' },
   { id: 'historico', label: 'Histórico de compras por ítem',   filename: 'Histórico de compras por item.xlsx', desc: 'Entregas reales por ítem — alimenta OTIF, Tendencias, Proveedores e Ítems.' },
   { id: 'orden',     label: 'Orden de compra por ítem',        filename: 'Orden de compra por item.xlsx',    desc: 'Líneas de orden de compra — alimenta OTIF y Órdenes de Compra.' },
   { id: 'precios',   label: 'Precios unitarios',                filename: 'precios unitarios.xlsb',           desc: 'Precio unitario histórico por ítem.' },
@@ -5935,10 +5935,12 @@ function actualizarMergeEnvios(newRows) {
   return { rows: keep.concat(newRows), desde, hasta, nuevas: newRows.length };
 }
 function actualizarParsePicking(wb) {
-  // "dif pedidos.xlsx" (Siesa): encabezados en la fila 1 con "Nro documento" y "Cant. pendiente"
+  // "dif pedidos.xlsx" (Siesa): encabezados en la fila 1 con "Cant. pendiente" y "Nro documento"
+  // (o, en el formato sin "Nro documento", con "Bodega entrada": PV108, CDP97...)
+  const tiene = (r, t) => r.some(c => String(c || '').trim().toLowerCase() === t);
   for (const name of wb.SheetNames) {
     const rs = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: null });
-    const h = rs.findIndex((r, k) => k < 25 && r && r.some(c => String(c || '').trim().toLowerCase() === 'nro documento') && r.some(c => String(c || '').trim().toLowerCase() === 'cant. pendiente'));
+    const h = rs.findIndex((r, k) => k < 25 && r && tiene(r, 'cant. pendiente') && (tiene(r, 'nro documento') || tiene(r, 'bodega entrada')));
     if (h >= 0) {
       const m = actualizarMergeEnvios(actualizarParsePedidosSiesa(rs, h));
       return { rows: m.rows, pdvNames: null, desde: m.desde, hasta: m.hasta, nuevas: m.nuevas };
@@ -5953,9 +5955,11 @@ function actualizarParsePedidosSiesa(rs, h) {
   const col = n => hdr.indexOf(n.toLowerCase());
   const iItemRes = col('Item resumen'), iDesc = col('Desc. item'), iItem = col('Item'), iEstado = col('Estado movto.'),
     iUM = col('U.M.'), iComp = col('Cant. comprometida'), iCons = col('Cant. consumida'), iPend = col('Cant. pendiente'),
-    iFecha = col('Fecha docto'), iDocto = col('Nro documento');
-  if (iItemRes < 0 || iFecha < 0 || iDocto < 0 || iCons < 0 || iPend < 0)
-    throw new Error('Faltan columnas obligatorias (Item resumen, Fecha docto, Nro documento, Cant. consumida, Cant. pendiente).');
+    iFecha = col('Fecha docto'), iDocto = col('Nro documento'), iBodEnt = col('Bodega entrada');
+  if (iItemRes < 0 || iFecha < 0 || (iDocto < 0 && iBodEnt < 0) || iCons < 0 || iPend < 0)
+    throw new Error('Faltan columnas obligatorias (Item resumen, Fecha docto, Nro documento o Bodega entrada, Cant. consumida, Cant. pendiente).');
+  // PDV desde "Bodega entrada" cuando el archivo no trae "Nro documento": PV108 -> "108", CDP97 -> "097"
+  const pdvDeBodega = v => { const m = String(v == null ? '' : v).match(/(\d+)/); return m ? m[1].padStart(3, '0') : ''; };
   const descPorRef = {};
   ((window.vGetEnviosSnapshot ? window.vGetEnviosSnapshot().rows : ENVIOS_DATA) || []).forEach(d => { if (d[4] && d[5]) descPorRef[d[4]] = d[5]; });
   const n = v => Number(v) || 0;
@@ -5965,15 +5969,16 @@ function actualizarParsePedidosSiesa(rs, h) {
     // solo pedidos cerrados: se excluyen anulados y los que siguen en proceso (Comprometida, Aprobada, Elaboración)
     if (iEstado >= 0 && String(r[iEstado] || '').trim().toLowerCase() !== 'cumplida') continue;
     const f = actualizarParseDate(r[iFecha]);
-    const docto = r[iDocto] == null ? '' : String(r[iDocto]).trim();
+    const docto = iDocto < 0 || r[iDocto] == null ? '' : String(r[iDocto]).trim();
+    const pdv = docto ? docto.split('-')[0] : (iBodEnt >= 0 ? pdvDeBodega(r[iBodEnt]) : '');
     const ref = r[iItemRes] == null ? '' : String(r[iItemRes]).trim().split(/\s+/)[0];
-    if (!f || !docto || !ref) continue;
+    if (!f || !pdv || !ref) continue;
     const iso = f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2, '0') + '-' + String(f.getDate()).padStart(2, '0');
     const desc = descPorRef[ref] || ((iDesc >= 0 && r[iDesc] != null ? String(r[iDesc]).trim() : '') + ' (' + ref + ')');
     const comp = iComp >= 0 ? n(r[iComp]) : 0, cons = n(r[iCons]), pend = n(r[iPend]);
-    out.push([docto.split('-')[0], f.getFullYear(), ACTUALIZAR_MES_ES[f.getMonth() + 1], iso, ref, desc,
-      cons + pend + comp, cons, pend, comp, null, docto, null, (iUM >= 0 && r[iUM] != null ? String(r[iUM]).trim() : null),
-      (iItem >= 0 ? r[iItem] : null), docto]);
+    out.push([pdv, f.getFullYear(), ACTUALIZAR_MES_ES[f.getMonth() + 1], iso, ref, desc,
+      cons + pend + comp, cons, pend, comp, null, docto || null, null, (iUM >= 0 && r[iUM] != null ? String(r[iUM]).trim() : null),
+      (iItem >= 0 ? r[iItem] : null), docto || ('PV' + pdv)]);
   }
   if (!out.length) throw new Error('No se encontraron pedidos en estado "Cumplida".');
   return out;
@@ -7591,8 +7596,12 @@ async function comprasTryAutoLoadFromDisk(silent, force) {
     for await (const handle of dirHandle.values()) {
       if (handle.kind !== 'file') continue;
       const name = handle.name.trim().toLowerCase();
-      const match = ACTUALIZAR_FILES.find(f => f.filename.trim().toLowerCase() === name);
-      if (match) found[match.id] = handle;
+      const match = ACTUALIZAR_FILES.find(f => f.filename.trim().toLowerCase() === name || (f.alias || []).includes(name));
+      // si están los dos nombres (ej. "dif pedidos" y "dif picking"), se usa el modificado más recientemente
+      if (match && found[match.id]) {
+        const [a, b] = await Promise.all([found[match.id].getFile(), handle.getFile()]);
+        if (b.lastModified > a.lastModified) found[match.id] = handle;
+      } else if (match) found[match.id] = handle;
     }
     const faltan = ACTUALIZAR_FILES.filter(f => !found[f.id]);
     if (Object.keys(found).length === 0) {
