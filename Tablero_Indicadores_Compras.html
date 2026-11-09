@@ -5891,7 +5891,7 @@ function initSortableTables() {
 const ACTUALIZAR_FILES = [
   { id: 'ahorros',   label: 'Ahorros a Septiembre',            filename: 'AHORROS A SEPT.xlsx',              desc: 'Hoja "RESUMEN" — alimenta la pestaña Negociaciones (ahorros por producto).' },
   { id: 'picking',   label: 'Diferencia de pedidos',           filename: 'dif pedidos.xlsx', alias: ['dif picking.xlsx'], desc: 'Pedidos vs. lo enviado a cada punto de venta (Siesa). Suma las fechas del archivo al histórico, sin borrar lo anterior. También se puede llamar "dif picking.xlsx" (el mismo archivo que usa Producción).' },
-  { id: 'historico', label: 'Histórico de compras por ítem',   filename: 'Histórico de compras por item.xlsx', desc: 'Entregas reales por ítem — alimenta OTIF, Tendencias, Proveedores e Ítems.' },
+  { id: 'historico', label: 'Histórico de compras por ítem',   filename: 'Histórico de compras por item.xlsx', alias: ['histórico de compras por item.xlsb'], desc: 'Entregas reales por ítem — alimenta OTIF, Tendencias, Proveedores e Ítems.' },
   { id: 'orden',     label: 'Orden de compra por ítem',        filename: 'Orden de compra por item.xlsx',    desc: 'Líneas de orden de compra — alimenta OTIF y Órdenes de Compra.' },
   { id: 'precios',   label: 'Precios unitarios',                filename: 'precios unitarios.xlsb',           desc: 'Precio unitario histórico por ítem.' },
   { id: 'salidas',   label: 'Salidas de inventario',            filename: 'Salidas de inventario.xlsx',       desc: 'Ajustes, devoluciones, mermas y transferencias por bodega.' },
@@ -5934,6 +5934,8 @@ function actualizarMergeEnvios(newRows) {
   const keep = (actual || []).filter(d => !(d[3] >= desde && d[3] <= hasta)).map(d => d.slice(0, 16)); // sin la semana calculada (índice 16)
   return { rows: keep.concat(newRows), desde, hasta, nuevas: newRows.length };
 }
+// Pedidos anulados o cancelados por el PDV: se descartan al cargar Envíos a PDV (no son pendientes reales).
+const ACTUALIZAR_RE_ANULADA = /anulad[oa]s?|anulaci[oó]n|cancelad[oa]s?/i;
 function actualizarParsePicking(wb) {
   // "dif pedidos.xlsx" (Siesa): encabezados en la fila 1 con "Cant. pendiente" y "Nro documento"
   // (o, en el formato sin "Nro documento", con "Bodega entrada": PV108, CDP97...)
@@ -5953,7 +5955,7 @@ function actualizarParsePicking(wb) {
 function actualizarParsePedidosSiesa(rs, h) {
   const hdr = rs[h].map(c => String(c || '').trim().toLowerCase());
   const col = n => hdr.indexOf(n.toLowerCase());
-  const iItemRes = col('Item resumen'), iDesc = col('Desc. item'), iItem = col('Item'), iEstado = col('Estado movto.'),
+  const iItemRes = col('Item resumen'), iDesc = col('Desc. item'), iItem = col('Item'), iEstado = (col('Estado movto.') >= 0 ? col('Estado movto.') : hdr.findIndex(c => c.startsWith('estado'))),
     iUM = col('U.M.'), iComp = col('Cant. comprometida'), iCons = col('Cant. consumida'), iPend = col('Cant. pendiente'),
     iFecha = col('Fecha docto'), iDocto = col('Nro documento'), iBodEnt = col('Bodega entrada');
   if (iItemRes < 0 || iFecha < 0 || (iDocto < 0 && iBodEnt < 0) || iCons < 0 || iPend < 0)
@@ -5968,6 +5970,7 @@ function actualizarParsePedidosSiesa(rs, h) {
     const r = rs[i]; if (!r) continue;
     // solo pedidos cerrados: se excluyen anulados y los que siguen en proceso (Comprometida, Aprobada, Elaboración)
     if (iEstado >= 0 && String(r[iEstado] || '').trim().toLowerCase() !== 'cumplida') continue;
+    if (r.some(c => typeof c === 'string' && ACTUALIZAR_RE_ANULADA.test(c))) continue; // anuladas / canceladas por el PDV
     const f = actualizarParseDate(r[iFecha]);
     const docto = iDocto < 0 || r[iDocto] == null ? '' : String(r[iDocto]).trim();
     const pdv = docto ? docto.split('-')[0] : (iBodEnt >= 0 ? pdvDeBodega(r[iBodEnt]) : '');
@@ -6002,6 +6005,7 @@ function actualizarParsePickingAntiguo(wb) {
   for (let i = headerRowIdx + 1; i < rows1.length; i++) {
     const row = rows1[i];
     if (!row || row[iDoctoERP] == null || row[iDoctoERP] === '') continue;
+    if (row.some(c => typeof c === 'string' && ACTUALIZAR_RE_ANULADA.test(c))) continue; // anuladas / canceladas por el PDV
     const doctoERP = String(row[iDoctoERP]).trim();
     const pdv = doctoERP.split('-')[0];
     const fPedido = actualizarParseDate(row[iFechaPedido]);
@@ -7915,7 +7919,9 @@ function vTipoRefCompras(ref){
 var V_TIPOS_RESP_COMPRAS={"Materia Prima":1,"Aseo y Químicos":1,"Material de Empaque":1,"Insumos":1,"No PT":1};
 // Este tablero es de Compras: la hoja "Envíos a PDV vs Pedidos" solo debe mostrar
 // referencias cuyo responsable es Compras (Materia Prima, Aseo y Químicos, Material de Empaque, Insumos, No PT) — Producto Terminado queda excluido (es de Producción).
-var ENVIOS_BASE=ENVIOS_DATA.filter(function(d){return d[0]!=="097"&&d[0]!=="101"&&d[0]!=="099"&&V_TIPOS_RESP_COMPRAS[vTipoRefCompras(d[4])];}); // 097/101/099 = centro de producción, no PDV real
+// Pedidos que el PDV hizo y luego anuló/canceló: no son envíos reales y no deben contar como pendientes.
+function vEsAnulada(d){ return /anulad|anulaci|cancelad/i.test(String(d[13]==null?"":d[13])); }
+var ENVIOS_BASE=ENVIOS_DATA.filter(function(d){return !vEsAnulada(d)&&d[0]!=="097"&&d[0]!=="101"&&d[0]!=="099"&&V_TIPOS_RESP_COMPRAS[vTipoRefCompras(d[4])];}); // 097/101/099 = centro de producción, no PDV real
 function vWeekNum(iso){
   if(!iso) return 0;
   var d=new Date(iso+"T00:00:00");
@@ -8626,7 +8632,7 @@ window.vRefreshEnvios = function(newEnviosData, newPdvNames) {
   ENVIOS_DATA = newEnviosData;
   if (newPdvNames) PDV_NAMES = newPdvNames;
 
-  ENVIOS_BASE = ENVIOS_DATA.filter(function(d){return d[0]!=="097"&&d[0]!=="101"&&d[0]!=="099"&&V_TIPOS_RESP_COMPRAS[vTipoRefCompras(d[4])];});
+  ENVIOS_BASE = ENVIOS_DATA.filter(function(d){return !vEsAnulada(d)&&d[0]!=="097"&&d[0]!=="101"&&d[0]!=="099"&&V_TIPOS_RESP_COMPRAS[vTipoRefCompras(d[4])];});
   ENVIOS_BASE.forEach(function(d){d.push(vWeekNum(d[3]));});
   ENVIOS_MERGED = vBuildTocinetaMerge();
 
