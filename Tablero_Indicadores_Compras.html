@@ -472,6 +472,7 @@ footer strong { color: rgba(255,255,255,0.8); }
 .filter-input{border:1.5px solid rgba(122,26,46,0.18);border-radius:var(--radius-sm);background:var(--cream);padding:6px 10px;font-family:Segoe UI,Arial,sans-serif;font-size:0.82rem;color:var(--charcoal);cursor:text;min-width:170px;transition:all 0.18s;}
 .filter-input:hover{border-color:var(--wine);}
 .filter-input:focus{outline:none;border-color:var(--wine);background-color:#fff;box-shadow:0 0 0 3px rgba(122,26,46,0.12);}
+.nov-kpi-click{cursor:pointer;transition:transform .15s,box-shadow .15s;}.nov-kpi-click:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(122,26,46,.18);}
 </style>
 </head>
 <body>
@@ -1666,15 +1667,15 @@ footer strong { color: rgba(255,255,255,0.8); }
   <span class="filter-label">Semana</span>
   <div class="v-ms" id="nov-sem-ms" style="position:relative;display:inline-block;"><button type="button" class="filter-select v-ms-btn" onclick="nvMsToggle('nov-sem')" style="cursor:pointer;text-align:left;min-width:130px;">Todas</button><div class="v-ms-panel" id="nov-sem-panel" style="display:none;position:absolute;top:105%;left:0;z-index:60;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:.5rem;max-height:320px;overflow-y:auto;min-width:220px;"></div></div>
   <span class="filter-label">Punto de Venta</span>
-  <select class="filter-select" id="nov-punto"><option value="">Todos</option></select>
+  <div class="v-ms" id="nov-punto-ms" style="position:relative;display:inline-block;"><button type="button" class="filter-select v-ms-btn" onclick="nvMsToggle('nov-punto')" style="cursor:pointer;text-align:left;min-width:130px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Todos</button><div class="v-ms-panel" id="nov-punto-panel" style="display:none;position:absolute;top:105%;left:0;z-index:60;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:.5rem;max-height:320px;overflow-y:auto;min-width:240px;"></div></div>
   <span class="filter-label">Producto</span>
-  <select class="filter-select" id="nov-producto"><option value="">Todos</option></select>
+  <div class="v-ms" id="nov-producto-ms" style="position:relative;display:inline-block;"><button type="button" class="filter-select v-ms-btn" onclick="nvMsToggle('nov-producto')" style="cursor:pointer;text-align:left;min-width:130px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Todos</button><div class="v-ms-panel" id="nov-producto-panel" style="display:none;position:absolute;top:105%;left:0;z-index:60;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:.5rem;max-height:320px;overflow-y:auto;min-width:240px;"></div></div>
   <span class="filter-label">Novedad/Defecto</span>
-  <select class="filter-select" id="nov-defecto"><option value="">Todas</option></select>
+  <div class="v-ms" id="nov-defecto-ms" style="position:relative;display:inline-block;"><button type="button" class="filter-select v-ms-btn" onclick="nvMsToggle('nov-defecto')" style="cursor:pointer;text-align:left;min-width:130px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Todas</button><div class="v-ms-panel" id="nov-defecto-panel" style="display:none;position:absolute;top:105%;left:0;z-index:60;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:.5rem;max-height:320px;overflow-y:auto;min-width:240px;"></div></div>
   <span class="filter-label">Tipo de Material</span>
-  <select class="filter-select" id="nov-clasif"><option value="">Todos</option><option value="PT">PT</option><option value="MP">MP</option></select>
+  <div class="v-ms" id="nov-clasif-ms" style="position:relative;display:inline-block;"><button type="button" class="filter-select v-ms-btn" onclick="nvMsToggle('nov-clasif')" style="cursor:pointer;text-align:left;min-width:130px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Todos</button><div class="v-ms-panel" id="nov-clasif-panel" style="display:none;position:absolute;top:105%;left:0;z-index:60;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:.5rem;max-height:320px;overflow-y:auto;min-width:240px;"></div></div>
   <span class="filter-label">Origen</span>
-  <select class="filter-select" id="nov-origen" title="Origen de la novedad: Punto de Venta, Producción o Proveedor (se llena cuando el Excel traiga la columna Origen)"><option value="">Todos</option></select>
+  <div class="v-ms" id="nov-origen-ms" style="position:relative;display:inline-block;" title="Origen de la novedad: Punto de Venta, Producción o Proveedor"><button type="button" class="filter-select v-ms-btn" onclick="nvMsToggle('nov-origen')" style="cursor:pointer;text-align:left;min-width:130px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Todos</button><div class="v-ms-panel" id="nov-origen-panel" style="display:none;position:absolute;top:105%;left:0;z-index:60;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:.5rem;max-height:320px;overflow-y:auto;min-width:240px;"></div></div>
   <span class="filter-label">Buscar</span>
   <input class="filter-input" id="nov-search" placeholder="Producto, lote, punto..." autocomplete="off">
   <button class="btn-reset" onclick="novResetFilters()">&#x21BA; Limpiar</button>
@@ -1683,22 +1684,22 @@ footer strong { color: rgba(255,255,255,0.8); }
 <main style="padding:2rem;max-width:1700px;margin:0 auto;">
   <div style="font-size:.72rem;color:var(--text-muted);background:var(--wine-pale);border-radius:8px;padding:.5rem .75rem;margin-bottom:1.25rem;">Fuente: <em>Novedades Producto Puntos de Venta.xlsx</em> &mdash; se procesan &uacute;nicamente los registros del a&ntilde;o <strong>2026</strong> (los de a&ntilde;os anteriores se descartan). Se actualiza desde la pesta&ntilde;a <strong>Actualizar datos</strong>.</div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem;margin-bottom:2rem;">
-    <div class="kpi-card" style="border-left:5px solid var(--wine);">
+    <div class="kpi-card nov-kpi-click" onclick="novKpiOpen('total')" title="Clic para ver el detalle" style="border-left:5px solid var(--wine);">
       <div class="kpi-badge" style="background:var(--wine-pale);color:var(--wine);">Total Novedades</div>
       <div id="nov-kpi-total" class="kpi-val" style="color:var(--wine);font-family:Segoe UI,Arial,sans-serif;font-size:1.75rem;font-weight:700;">&#8212;</div>
       <div id="nov-kpi-total-n" style="font-size:.72rem;color:var(--text-muted);margin-top:.5rem;">reportes en 2026</div>
     </div>
-    <div class="kpi-card" style="border-left:5px solid #2563EB;">
+    <div class="kpi-card nov-kpi-click" onclick="novKpiOpen('producto')" title="Clic para ver el detalle" style="border-left:5px solid #2563EB;">
       <div class="kpi-badge" style="background:#DBEAFE;color:#1D4ED8;">Producto con M&aacute;s Novedades</div>
       <div id="nov-kpi-producto" class="kpi-val" style="color:#1D4ED8;font-family:Segoe UI,Arial,sans-serif;font-size:1.1rem;font-weight:700;line-height:1.3;">&#8212;</div>
       <div id="nov-kpi-producto-n" style="font-size:.72rem;color:var(--text-muted);margin-top:.5rem;">&#8212;</div>
     </div>
-    <div class="kpi-card" style="border-left:5px solid #DC2626;">
+    <div class="kpi-card nov-kpi-click" onclick="novKpiOpen('defecto')" title="Clic para ver el detalle" style="border-left:5px solid #DC2626;">
       <div class="kpi-badge" style="background:#FEE2E2;color:#991B1B;">Defecto Frecuente</div>
       <div id="nov-kpi-defecto" class="kpi-val" style="color:#991B1B;font-family:Segoe UI,Arial,sans-serif;font-size:1.3rem;font-weight:700;">&#8212;</div>
       <div id="nov-kpi-defecto-n" style="font-size:.72rem;color:var(--text-muted);margin-top:.5rem;">&#8212;</div>
     </div>
-    <div class="kpi-card" style="border-left:5px solid var(--gold);">
+    <div class="kpi-card nov-kpi-click" onclick="novKpiOpen('punto')" title="Clic para ver el detalle" style="border-left:5px solid var(--gold);">
       <div class="kpi-badge" style="background:#FEF3C7;color:#92400E;">Punto Más Afectado</div>
       <div id="nov-kpi-punto" class="kpi-val" style="color:#92400E;font-family:Segoe UI,Arial,sans-serif;font-size:1.3rem;font-weight:700;">&#8212;</div>
       <div id="nov-kpi-punto-n" style="font-size:.72rem;color:var(--text-muted);margin-top:.5rem;">&#8212;</div>
@@ -7183,6 +7184,15 @@ function actualizarComputeHistProvItem(wbHist, histRows) {
       if (typeof f === 'number' && f > 0) um[ref] = [String(r[2] || '').trim(), f, r[4] != null ? String(r[4]).trim() : ''];
     });
   }
+  // Respaldo por (Referencia|U.M. compra): "Und de medida" solo trae una U.M. de compra por ítem, y muchos se
+  // compran en varias (PAQ, X5KG, X400...). Para esas se usan los mismos factores de Precios ("Factores conversión"
+  // del Histórico + los revisados por Compras + correcciones), así no quedan "sin homologar".
+  let fxLookup = {};
+  try {
+    if (wbHist && wbHist.Sheets && wbHist.Sheets['Factores conversión']) fxLookup = actualizarFactoresDesdeXlsb(wbHist);
+    else { const t = comprasStoreGet('montolivo_factores'); if (t) fxLookup = JSON.parse(t) || {}; }
+  } catch (e) { fxLookup = {}; }
+  fxLookup = Object.assign({}, fxLookup, ACTUALIZAR_FACTORES_BASE, ACTUALIZAR_FACTOR_FIX);
   const nuevo = () => ({ gasto: 0, facturas: 0, gastoGramos: 0, gramos: 0, gastoUnidades: 0, unidades: 0, otrasUM: {}, mm: {} });
   const porProv = {}, porItem = {};
   histRows.forEach(r => {
@@ -7204,6 +7214,14 @@ function actualizarComputeHistProvItem(wbHist, histRows) {
       }
     } else if (CLEAN[u]) { gramos = cant * CLEAN[u]; hG = true; }
     else if (u === 'UNID' || u === 'UND') { unidades = cant; hU = true; }
+    if (!hG && !hU && u) {
+      const fx = fxLookup[ref + '|' + u];
+      const fb = fx ? String(fx[1] || '').trim().toUpperCase() : '';
+      if (fx && Number(fx[0]) > 0) {
+        if (fb === 'GR' || fb === 'KG') { gramos = cant * Number(fx[0]) * (fb === 'KG' ? 1000 : 1); hG = true; }
+        else if (fb === 'UNID' || fb === 'UND') { unidades = cant * Number(fx[0]); hU = true; }
+      }
+    }
     const fecha = actualizarParseDate(r['Fecha']);
     const mes = fecha ? actualizarMonthKey(fecha) : null;
     [[prov, porProv], [item, porItem]].forEach(([name, acc]) => {
@@ -8979,7 +8997,7 @@ window.novParseWorkbook=function(wb){
 const MES_ORDER={enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,octubre:10,noviembre:11,diciembre:12};
 const MES_CAP={enero:"Enero",febrero:"Febrero",marzo:"Marzo",abril:"Abril",mayo:"Mayo",junio:"Junio",julio:"Julio",agosto:"Agosto",septiembre:"Septiembre",octubre:"Octubre",noviembre:"Noviembre",diciembre:"Diciembre"};
 var NOV_COLORS=["#7A1A2E","#B7A254","#2563EB","#16A34A","#9333EA","#DC2626","#0EA5E9","#F59E0B","#059669","#6366F1","#DB2777","#65A30D"];
-var elNM=document.getElementById("nov-mes"),elNP=document.getElementById("nov-punto"),elNPr=document.getElementById("nov-producto"),elND=document.getElementById("nov-defecto"),elNC=document.getElementById("nov-clasif"),elNO=document.getElementById("nov-origen"),elNQ=document.getElementById("nov-search");
+var elNM=document.getElementById("nov-mes"),elNQ=document.getElementById("nov-search");
 
 function novWeekNum(iso){
   if(!iso) return null;
@@ -9090,24 +9108,27 @@ function novPopulateFilters(){
     var parts=mk.split("-");var label=(MES_CAP[Object.keys(MES_ORDER).filter(function(m){return MES_ORDER[m]==+parts[1];})[0]]||parts[1])+" "+parts[0];
     var o=document.createElement("option");o.value=mk;o.textContent=label;elNM.appendChild(o);
   });
-  novUniqueSorted(6).forEach(function(v){var o=document.createElement("option");o.value=v;o.textContent=v;elNP.appendChild(o);});
-  novUniqueSorted(1).forEach(function(v){var o=document.createElement("option");o.value=v;o.textContent=v;elNPr.appendChild(o);});
-  novUniqueSorted(4).forEach(function(v){var o=document.createElement("option");o.value=v;o.textContent=v;elND.appendChild(o);});
+  var onCh=function(){novDetailPage=0;novApply();};
+  var toOpts=function(arr){return arr.map(function(v){return{value:String(v),label:String(v)};});};
+  nvMsInit("nov-punto", toOpts(novUniqueSorted(6)), "Todos", true, onCh);
+  nvMsInit("nov-producto", toOpts(novUniqueSorted(1)), "Todos", true, onCh);
+  nvMsInit("nov-defecto", toOpts(novUniqueSorted(4)), "Todas", true, onCh);
+  nvMsInit("nov-clasif", [{value:"PT",label:"PT"},{value:"MP",label:"MP"}], "Todos", false, onCh);
   var extras=[...new Set(NOVEDADES_DATA.map(novOrigen).filter(function(v){return v&&NOV_ORIGENES.indexOf(v)===-1;}))].sort();
-  NOV_ORIGENES.concat(extras).forEach(function(v){var o=document.createElement("option");o.value=v;o.textContent=v;elNO.appendChild(o);});
-  var oS=document.createElement("option");oS.value=NOV_SIN_ORIGEN;oS.textContent="Sin origen registrado";elNO.appendChild(oS);
+  nvMsInit("nov-origen", toOpts(NOV_ORIGENES.concat(extras)).concat([{value:NOV_SIN_ORIGEN,label:"Sin origen registrado"}]), "Todos", false, onCh);
 }
+function novSel(key){ var st=NV_MS_STATE[key]; return st&&st.selected.size?st.selected:null; }
 function novRows(){
-  var mes=elNM.value,punto=elNP.value,prod=elNPr.value,def=elND.value,clasif=elNC.value,origen=elNO.value,q=elNQ.value.trim().toLowerCase();
-  var semSel=NV_MS_STATE["nov-sem"]?NV_MS_STATE["nov-sem"].selected:null;
+  var mes=elNM.value,q=elNQ.value.trim().toLowerCase();
+  var semSel=novSel("nov-sem"),pSel=novSel("nov-punto"),prSel=novSel("nov-producto"),dSel=novSel("nov-defecto"),cSel=novSel("nov-clasif"),oSel=novSel("nov-origen");
   return NOVEDADES_DATA.filter(function(d){
     if(mes&&(!d[0]||d[0].slice(0,7)!==mes))return false;
-    if(semSel&&semSel.size&&!semSel.has(String(d[8])))return false;
-    if(punto&&d[6]!==punto)return false;
-    if(prod&&d[1]!==prod)return false;
-    if(def&&d[4]!==def)return false;
-    if(clasif&&novClasif(d)!==clasif)return false;
-    if(origen&&(origen===NOV_SIN_ORIGEN?novOrigen(d)!=="":novOrigen(d)!==origen))return false;
+    if(semSel&&!semSel.has(String(d[8])))return false;
+    if(pSel&&!pSel.has(String(d[6])))return false;
+    if(prSel&&!prSel.has(String(d[1])))return false;
+    if(dSel&&!dSel.has(String(d[4])))return false;
+    if(cSel&&!cSel.has(novClasif(d)))return false;
+    if(oSel){var og=novOrigen(d);if(!(oSel.has(og)||(og===""&&oSel.has(NOV_SIN_ORIGEN))))return false;}
     if(q){
       var hay=[d[1],d[3],d[4],d[6],novOrigen(d),d[9]||""].join(" ").toLowerCase();
       if(hay.indexOf(q)===-1)return false;
@@ -9115,17 +9136,13 @@ function novRows(){
     return true;
   });
 }
+var NOV_MS_KEYS=["nov-sem","nov-punto","nov-producto","nov-defecto","nov-clasif","nov-origen"];
 window.novResetFilters=function(){
-  elNM.value="";elNP.value="";elNPr.value="";elND.value="";elNC.value="";elNO.value="";elNQ.value="";
-  if(NV_MS_STATE["nov-sem"]){NV_MS_STATE["nov-sem"].selected.clear();NV_MS_STATE["nov-sem"].search="";nvMsUpdateButton("nov-sem");}
+  elNM.value="";elNQ.value="";
+  NOV_MS_KEYS.forEach(function(k){var st=NV_MS_STATE[k];if(st){st.selected.clear();st.search="";nvMsUpdateButton(k);}});
   novApply();
 };
 elNM.addEventListener("change",novApply);
-elNP.addEventListener("change",novApply);
-elNPr.addEventListener("change",novApply);
-elND.addEventListener("change",novApply);
-elNC.addEventListener("change",novApply);
-elNO.addEventListener("change",novApply);
 elNQ.addEventListener("input",novApply);
 
 function novMostFrequent(rows,idx){
@@ -9287,7 +9304,8 @@ window.novDetailNext=function(){novDetailPage++;novDetailRender(novRows());};
 function novApply(){
   var rows=novRows();
   document.getElementById("nov-info").textContent=NOVEDADES_DATA.length?(rows.length.toLocaleString("es-CO")+" novedades"):"Sin datos publicados todavía — ve a \"Actualizar datos\"";
-  if(elNO.value&&elNO.value!==NOV_SIN_ORIGEN&&!NOVEDADES_DATA.some(function(d){return novOrigen(d);})) document.getElementById("nov-info").textContent="0 novedades — el Excel aún no trae la columna Origen";
+  var oSelA=novSel("nov-origen");
+  if(oSelA&&!oSelA.has(NOV_SIN_ORIGEN)&&!NOVEDADES_DATA.some(function(d){return novOrigen(d);})) document.getElementById("nov-info").textContent="0 novedades — el Excel aún no trae la columna Origen";
   novKpi(rows);
   novChartProductos(rows);
   novChartDefectos(rows);
@@ -9296,13 +9314,121 @@ function novApply(){
   novDetailRender(rows);
 }
 window.novApply=novApply;
+// ---- Tarjetas KPI: al hacer clic se abre un panel con el detalle ----
+var NOV_KPI_CFG={
+  total:{title:"Total Novedades"},
+  producto:{title:"Novedades por Producto",idx:1,col:"Producto",filterKey:"nov-producto"},
+  defecto:{title:"Novedades por Defecto",idx:4,col:"Novedad / Defecto",filterKey:"nov-defecto"},
+  punto:{title:"Novedades por Punto de Venta",idx:6,col:"Punto de Venta",filterKey:"nov-punto"}
+};
+var novKpiState={kind:null,sel:null};
+function novEsc(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function novGroup(rows,fn){
+  var m={};
+  rows.forEach(function(d){var k=fn(d);if(k==null||k==="")k="(Sin dato)";k=String(k);if(!m[k])m[k]={label:k,n:0,cant:0};m[k].n++;m[k].cant+=Number(d[5])||0;});
+  return Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){return b.n-a.n;});
+}
+function novMiniTable(title,groups,total,clickable){
+  var h='<div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;overflow:hidden;">';
+  h+='<div style="background:rgba(122,26,46,0.85);color:#fff;font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:7px 10px;display:flex;justify-content:space-between;gap:.5rem;"><span>'+title+'</span><span>Reportes · %</span></div>';
+  h+='<div style="max-height:'+(clickable?'440px':'220px')+';overflow-y:auto;">';
+  groups.forEach(function(g,i){
+    var pct=total?g.n/total*100:0;
+    var active=clickable&&novKpiState.sel===g.label;
+    h+='<div '+(clickable?'onclick="novKpiPick('+i+')" ':'')+'style="display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:.78rem;border-bottom:1px solid rgba(0,0,0,.05);'+(clickable?'cursor:pointer;':'')+(active?'background:var(--wine-pale);font-weight:700;':(i%2?'background:#FBF7F3;':''))+'">';
+    h+='<span style="color:var(--text-muted);width:22px;text-align:right;flex-shrink:0;">'+(i+1)+'</span><span style="flex:1;">'+novEsc(g.label)+'</span>';
+    h+='<span style="width:60px;height:6px;background:rgba(0,0,0,.06);border-radius:99px;overflow:hidden;flex-shrink:0;"><span style="display:block;height:100%;width:'+pct.toFixed(1)+'%;background:var(--wine);"></span></span>';
+    h+='<strong style="min-width:70px;text-align:right;flex-shrink:0;">'+g.n+' · '+pct.toFixed(0)+'%</strong></div>';
+  });
+  if(!groups.length) h+='<div style="padding:1rem;text-align:center;color:var(--text-muted);font-size:.78rem;">Sin datos</div>';
+  return h+'</div></div>';
+}
+function novRecordsTable(rows){
+  var h='<div style="max-height:360px;overflow:auto;border:1px solid rgba(0,0,0,.08);border-radius:10px;"><table style="width:100%;border-collapse:collapse;font-size:.75rem;"><thead><tr>';
+  ["Fecha","Punto de Venta","Producto","Lote","Novedad / Defecto","Cantidad","Origen"].forEach(function(c){h+='<th style="position:sticky;top:0;background:#7A1A2E;color:#fff;padding:7px 10px;text-align:left;font-size:.65rem;text-transform:uppercase;white-space:nowrap;">'+c+'</th>';});
+  h+='</tr></thead><tbody>';
+  var sorted=rows.slice().sort(function(a,b){return String(b[0]||"").localeCompare(String(a[0]||""));});
+  sorted.forEach(function(d,i){
+    var td='padding:6px 10px;border-bottom:1px solid rgba(0,0,0,.05);';
+    h+='<tr style="background:'+(i%2?"#FBF7F3":"#fff")+';"><td style="'+td+'white-space:nowrap;">'+novFmtFecha(d[0])+'</td><td style="'+td+'">'+novEsc(d[6]||"—")+'</td><td style="'+td+'">'+novEsc(d[1]||"—")+'</td><td style="'+td+'">'+novEsc(d[3]||"—")+'</td><td style="'+td+'font-weight:700;color:var(--wine-dark);">'+novEsc(d[4]||"—")+'</td><td style="'+td+'text-align:right;white-space:nowrap;">'+(Number(d[5])||0).toLocaleString("es-CO")+' '+novEsc(d[2]||"")+'</td><td style="'+td+'">'+novEsc(novOrigen(d)||"—")+'</td></tr>';
+  });
+  if(!sorted.length) h+='<tr><td colspan="7" style="padding:1.5rem;text-align:center;color:var(--text-muted);">Sin registros</td></tr>';
+  return h+'</tbody></table></div>';
+}
+function novMesLabel(mk){
+  if(!mk) return "Sin fecha";
+  var p=mk.split("-");var k=Object.keys(MES_ORDER).filter(function(m){return MES_ORDER[m]==+p[1];})[0];
+  return (MES_CAP[k]||p[1])+" "+p[0];
+}
+function novKpiRender(){
+  var cfg=NOV_KPI_CFG[novKpiState.kind]; if(!cfg) return;
+  var rows=novRows(), total=rows.length;
+  var body=document.getElementById("nov-kpi-modal-body");
+  document.getElementById("nov-kpi-modal-title").textContent=cfg.title;
+  var h='<div style="font-size:.75rem;color:var(--text-muted);margin-bottom:1rem;">'+total.toLocaleString("es-CO")+' novedades con los filtros actuales.</div>';
+  if(novKpiState.kind==="total"){
+    h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin-bottom:1.25rem;">';
+    var meses=novGroup(rows,function(d){return d[0]?d[0].slice(0,7):"";}).sort(function(a,b){return a.label.localeCompare(b.label);}).map(function(g){return{label:novMesLabel(g.label==="(Sin dato)"?"":g.label),n:g.n,cant:g.cant};});
+    h+=novMiniTable("Por mes",meses,total,false);
+    h+=novMiniTable("Por origen",novGroup(rows,function(d){return novOrigen(d)||"Sin origen registrado";}),total,false);
+    h+=novMiniTable("Por tipo de material",novGroup(rows,function(d){return novClasif(d)||"Sin clasificar";}),total,false);
+    h+='</div><div style="font-weight:700;font-size:.85rem;color:var(--wine-dark);margin-bottom:.5rem;">Todas las novedades</div>'+novRecordsTable(rows);
+  } else {
+    var groups=novGroup(rows,function(d){return d[cfg.idx];});
+    novKpiState.groups=groups;
+    if(novKpiState.sel==null||!groups.some(function(g){return g.label===novKpiState.sel;})) novKpiState.sel=groups.length?groups[0].label:null;
+    var selRows=rows.filter(function(d){return String(d[cfg.idx]||"(Sin dato)")===novKpiState.sel;});
+    h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;align-items:start;">';
+    h+='<div>'+novMiniTable(cfg.col+" (clic para ver)",groups,total,true)+'</div><div style="grid-column:span 2;min-width:0;">';
+    if(novKpiState.sel!=null){
+      var cant=selRows.reduce(function(s,d){return s+(Number(d[5])||0);},0);
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem;"><div><div style="font-weight:700;font-size:.95rem;color:var(--wine-dark);">'+novEsc(novKpiState.sel)+'</div><div style="font-size:.72rem;color:var(--text-muted);">'+selRows.length+' reporte(s) · cantidad afectada '+cant.toLocaleString("es-CO")+'</div></div>';
+      h+='<button onclick="novKpiApplyFilter()" style="font-size:.72rem;font-weight:600;padding:6px 12px;border:1px solid rgba(122,26,46,.3);border-radius:8px;background:#fff;color:var(--wine-dark);cursor:pointer;">Filtrar el tablero por este</button></div>';
+      var sub=[];
+      if(cfg.idx!==4) sub.push(novMiniTable("Defectos",novGroup(selRows,function(d){return d[4];}),selRows.length,false));
+      if(cfg.idx!==1) sub.push(novMiniTable("Productos",novGroup(selRows,function(d){return d[1];}),selRows.length,false));
+      if(cfg.idx!==6) sub.push(novMiniTable("Puntos de venta",novGroup(selRows,function(d){return d[6];}),selRows.length,false));
+      h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem;margin-bottom:.75rem;">'+sub.join("")+'</div>';
+      h+=novRecordsTable(selRows);
+    }
+    h+='</div></div>';
+  }
+  body.innerHTML=h;
+}
+function novKpiEnsureModal(){
+  if(document.getElementById("nov-kpi-modal")) return;
+  var m=document.createElement("div");
+  m.id="nov-kpi-modal";
+  m.style.cssText="display:none;position:fixed;inset:0;z-index:1000;background:rgba(30,10,18,.45);align-items:flex-start;justify-content:center;padding:4vh 16px;overflow-y:auto;";
+  m.innerHTML='<div style="background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:100%;max-width:1200px;padding:1.25rem 1.5rem;font-family:Segoe UI,Arial,sans-serif;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;"><div id="nov-kpi-modal-title" style="font-size:1.15rem;font-weight:700;color:var(--wine-dark);"></div><button onclick="novKpiClose()" title="Cerrar (Esc)" style="border:none;background:none;font-size:1.6rem;line-height:1;cursor:pointer;color:var(--wine-dark);">&times;</button></div><div id="nov-kpi-modal-body"></div></div>';
+  m.addEventListener("click",function(e){if(e.target===m)novKpiClose();});
+  document.body.appendChild(m);
+  document.addEventListener("keydown",function(e){if(e.key==="Escape")novKpiClose();});
+}
+window.novKpiOpen=function(kind){
+  novKpiEnsureModal();
+  novKpiState.kind=kind; novKpiState.sel=null;
+  novKpiRender();
+  document.getElementById("nov-kpi-modal").style.display="flex";
+  document.body.style.overflow="hidden";
+};
+window.novKpiClose=function(){
+  var m=document.getElementById("nov-kpi-modal");
+  if(m&&m.style.display!=="none"){m.style.display="none";document.body.style.overflow="";}
+};
+window.novKpiPick=function(i){var g=novKpiState.groups&&novKpiState.groups[i];if(!g)return;novKpiState.sel=g.label;novKpiRender();};
+window.novKpiApplyFilter=function(){
+  var cfg=NOV_KPI_CFG[novKpiState.kind], st=cfg&&NV_MS_STATE[cfg.filterKey];
+  if(!st||novKpiState.sel==null) return;
+  st.selected.clear(); st.selected.add(String(novKpiState.sel)); nvMsUpdateButton(cfg.filterKey);
+  novKpiClose(); novApply();
+};
 // "Actualizar datos" (Compras): reemplaza las novedades por las del Excel publicado y rehace filtros y gráficas.
 window.novRefreshData=function(rows){
   NOVEDADES_DATA.length=0;
   rows.forEach(function(r){NOVEDADES_DATA.push(r.slice());});
   NOVEDADES_DATA.forEach(function(d){d[8]=novWeekNum(d[0]);});
-  [elNM,elNP,elNPr,elND,elNO].forEach(function(el){while(el.options.length>1)el.remove(1);el.value="";});
-  elNC.value="";elNQ.value="";
+  elNM.value="";elNQ.value="";
   novPopulateFilters();
   novDetailPage=0;
   novApply();
