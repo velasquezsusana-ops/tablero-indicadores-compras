@@ -336,6 +336,25 @@ main { padding: 2rem; max-width: 1600px; margin: 0 auto; }
 .pareto-val { font-family: 'Lato'; font-size: 0.72rem; color: var(--wine); font-weight: 500; white-space: nowrap; }
 .pareto-pct { font-family: 'Lato'; font-size: 0.68rem; color: var(--text-muted); white-space: nowrap; }
 
+/* ── TOP 10 PROVEEDORES + CONCENTRACIÓN (tabla con barras) ── */
+.prov-conc-kpis { display: flex; flex-wrap: wrap; gap: .75rem; margin: .5rem 0 1rem; }
+.prov-conc-kpi { flex: 0 1 320px; background: var(--wine-ghost); border-radius: 10px; padding: .6rem .85rem; }
+.prov-conc-kpi .lbl { font-size: .66rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); font-weight: 700; }
+.prov-conc-kpi .val { font-family: 'Lato'; font-size: 1.25rem; font-weight: 700; color: var(--wine); margin-top: 2px; }
+.prov-conc-kpi .sub { font-size: .68rem; color: var(--text-muted); }
+.prov-conc-tbl { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.prov-conc-tbl th { font-size: .64rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); font-weight: 700; text-align: left; padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,.1); white-space: nowrap; }
+.prov-conc-tbl th.num, .prov-conc-tbl td.num { text-align: right; }
+.prov-conc-tbl td { padding: 7px 8px; border-bottom: 1px solid rgba(0,0,0,.05); vertical-align: middle; }
+.prov-conc-tbl tr.is-active td { background: var(--wine-pale); }
+.prov-conc-tbl tbody tr:hover td { background: var(--wine-ghost); }
+.prov-conc-tbl .rk { width: 26px; text-align: center; font-family: 'Lato'; font-weight: 700; color: var(--text-light); }
+.prov-conc-tbl .nm { color: var(--charcoal); font-weight: 600; min-width: 180px; }
+.prov-conc-tbl .gasto { font-family: 'Lato'; font-weight: 700; color: var(--wine); white-space: nowrap; }
+.prov-conc-tbl .pct { font-family: 'Lato'; font-weight: 700; color: var(--charcoal); white-space: nowrap; }
+.prov-conc-tbl .acum { font-family: 'Lato'; color: var(--text-muted); white-space: nowrap; }
+.prov-conc-tbl tfoot td { font-weight: 700; border-top: 1px solid rgba(0,0,0,.12); border-bottom: none; background: #FBF7F3; }
+
 /* ── INSIGHT CARD ── */
 .insight-card {
   background: linear-gradient(135deg, var(--wine-ghost) 0%, #fff 100%);
@@ -751,17 +770,13 @@ footer strong { color: rgba(255,255,255,0.8); }
 <!-- ══ TAB PROVEEDORES ══ -->
 <section id="tab-proveedores" class="tab-panel">
   <h2 class="section-title">Indicadores 4–5 — Gestión de Proveedores</h2>
-  <div class="chart-grid-21">
+  <div class="chart-grid-1">
     <div class="chart-card">
-      <div class="card-title">4. Top 10 Proveedores por Gasto Histórico</div>
-      <div class="card-sub">Concentración del gasto — riesgo de dependencia (COP Millones)</div>
-      <div class="chart-wrap" style="height:340px"><canvas id="ch-top-prov"></canvas></div>
+      <div class="card-title">4–5. Top 10 Proveedores y Concentración del Gasto</div>
+      <div class="card-sub">Gasto neto (COP Millones) y % sobre el <strong>total de compras</strong> de todos los proveedores — riesgo de dependencia</div>
+      <div class="prov-conc-kpis" id="prov-conc-kpis"></div>
+      <div id="prov-conc-table"></div>
       <div class="card-note" id="note-prov-fuera" style="display:none"></div>
-    </div>
-    <div class="chart-card">
-      <div class="card-title">5. Concentración de Proveedores</div>
-      <div class="card-sub">% del gasto total Top 10 por proveedor</div>
-      <ul class="pareto-list" id="supplierConcentration"></ul>
     </div>
   </div>
   <div class="chart-grid-1" id="card-tendencia-proveedor" style="display:none">
@@ -2888,81 +2903,76 @@ function renderTendenciasTab() { renderOcMensual(); }
 // ══════════════════════════════════════════════════════════════════════════
 // PROVEEDORES — Top 10, concentración, compradores
 // ══════════════════════════════════════════════════════════════════════════
+// Total de compras (todos los proveedores) con los filtros activos de fecha, bodega e ítem.
+function provTotalCompras(cross) {
+  const idxs = dateIdxs();
+  if (cross) {
+    return crossSpendList(PROV_ITEM_CROSS.provsByItem, filterItems, idxs).reduce((s,x) => s + x[1], 0);
+  }
+  if (filterBodegas.length) {
+    let v = 0;
+    filterBodegas.forEach(bod => {
+      const byProv = BODEGA_MASTER.hist.provMonthly[bod] || {};
+      Object.keys(byProv).forEach(p => { v += sumIdxs(byProv[p], idxs); });
+    });
+    return v;
+  }
+  return FILTER.topSuppliers.reduce((s,x) => s + (idxs.length ? sumIdxs(x.monthly, idxs) : x.total), 0);
+}
+
+// 4–5. Top 10 proveedores + concentración: una sola tabla con barras, gasto y % sobre el total de compras.
 function renderTopProv() {
-  destroyChart('ch-top-prov');
   const cross = getCrossTopSuppliers();
   const baseList = cross ? cross.top : (filteredTopList(FILTER.topSuppliers) || D.topSuppliersHist);
   const { list, fueraDeTop, truncated, matchedCount } = cross ? { list: baseList, fueraDeTop: false, truncated: false } : filterEntityList(baseList, filterProvs, FILTER.topSuppliers, x => x.name);
-  charts['ch-top-prov'] = new Chart(document.getElementById('ch-top-prov'), {
-    type: 'bar',
-    data: { labels: list.map(x => x[0].length > 28 ? x[0].slice(0,25)+'...' : x[0]),
-      datasets: [{ label: 'Gasto Neto (M COP)', data: list.map(x => x[1]), backgroundColor: list.map(x => matchAnyName(filterProvs, x[0]) && filterProvs.length ? COLORS.gold : COLORS.wine), borderRadius: 4 }] },
-    options: { ...baseOpts, indexAxis: 'y', plugins: { ...baseOpts.plugins, legend: { display: false },
-      tooltip: { ...TOOLTIP_BASE, callbacks: { label: c => fmt(c.raw) } } },
-      scales: { ...baseOpts.scales, x: { ...baseOpts.scales.x, ticks: { ...baseOpts.scales.x.ticks, callback: v => '$'+v+'M' } } } }
+  const total = provTotalCompras(cross);
+  const pctOf = v => total > 0 ? (v / total * 100) : 0;
+  const fmtPct = v => v.toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+  const showAcum = !filterProvs.length || !!cross;
+
+  // KPIs de concentración
+  const allCount = cross ? cross.fullCount : ((filteredTopList(FILTER.topSuppliers, 9999) || FILTER.topSuppliers.filter(s => s.total > 0)).length);
+  const periodoTxt = [filterAnios.length ? 'Año ' + anioLabel() : '', filterMeses.length ? mesLabel() : ''].filter(Boolean).join(' · ') || 'Todo el periodo';
+  document.getElementById('prov-conc-kpis').innerHTML = `
+    <div class="prov-conc-kpi"><div class="lbl">Total compras${periodoTxt ? ' · ' + periodoTxt : ''}</div><div class="val">${fmt(total)}</div><div class="sub">${allCount.toLocaleString('es-CO')} proveedores con compras${filterBodegas.length ? ' · bodega(s) filtrada(s)' : ''}</div></div>`;
+
+  // Tabla
+  let acum = 0;
+  let h = `<div style="overflow-x:auto;"><table class="prov-conc-tbl"><thead><tr>
+    <th class="rk">#</th><th>Proveedor</th><th class="num">Gasto</th><th class="num" title="Lo que pesa este proveedor sobre el total de compras del periodo">% del total de compras</th>${showAcum ? '<th class="num" title="Suma del % de este proveedor y los que están por encima de él en la tabla">% acumulado del gasto</th>' : ''}
+  </tr></thead><tbody>`;
+  list.forEach(x => {
+    const rank = baseList.findIndex(y => y[0] === x[0]);
+    const p = pctOf(x[1]);
+    acum += p;
+    const active = filterProvs.length && matchAnyName(filterProvs, x[0]);
+    h += `<tr class="${active ? 'is-active' : ''}">
+      <td class="rk">${rank >= 0 ? rank + 1 : '—'}</td>
+      <td class="nm">${x[0]}</td>
+      <td class="num gasto">${fmt(x[1])}</td>
+      <td class="num pct">${fmtPct(p)}</td>
+      ${showAcum ? `<td class="num acum">${fmtPct(acum)}</td>` : ''}
+    </tr>`;
   });
+  const sumList = list.reduce((s,x) => s + x[1], 0);
+  h += `</tbody><tfoot><tr><td></td><td>Total ${list.length === 1 ? 'proveedor' : list.length + ' proveedores'} mostrados</td>
+    <td class="num gasto">${fmt(sumList)}</td><td class="num pct">${fmtPct(pctOf(sumList))}</td>${showAcum ? '<td></td>' : ''}</tr></tfoot></table></div>`;
+  h += `<div style="font-size:.7rem;color:var(--text-muted);margin-top:.6rem;line-height:1.5;"><strong>% del total de compras:</strong> cuánto pesa cada proveedor sobre todo lo comprado en el periodo filtrado.${showAcum ? ' <strong>% acumulado del gasto:</strong> suma de ese proveedor y los de arriba; ej. en la fila 3 indica cuánto de las compras se concentra en los 3 primeros proveedores.' : ''}</div>`;
+  document.getElementById('prov-conc-table').innerHTML = h;
+
   const noteEl = document.getElementById('note-prov-fuera');
   if (cross || fueraDeTop || truncated) {
     const parts = [];
-    if (cross) parts.push(`Proveedores que suministran: ${itemLabel() || filterItems.length+' ítems'}${cross.fullCount>10 ? ' — mostrando Top 10 de '+cross.fullCount : ''}.`);
+    if (cross) parts.push(`Proveedores que suministran: ${itemLabel() || filterItems.length+' ítems'}${cross.fullCount>10 ? ' — mostrando Top 10 de '+cross.fullCount : ''}. El % es sobre el total de compras de esos ítems.`);
     if (truncated) parts.push(`Mostrando Top 10 de ${matchedCount} proveedores seleccionados.`);
-    if (fueraDeTop) parts.push(`Incluye proveedor(es) fuera del Top 10 histórico — valor exacto: ${list.map(x => `"${x[0]}": ${fmt(x[1])}`).join(' · ')}.`);
+    if (fueraDeTop) parts.push(`Incluye proveedor(es) fuera del Top 10 (sin posición en el ranking).`);
     noteEl.style.display = 'block';
     noteEl.textContent = 'ⓘ ' + parts.join(' ');
   } else noteEl.style.display = 'none';
 }
 
-function renderConcentracion() {
-  const el = document.getElementById('supplierConcentration');
-  el.innerHTML = '';
-  const baseList = filteredTopList(FILTER.topSuppliers) || D.topSuppliersHist;
-  const total = baseList.reduce((s,x) => s+x[1], 0);
-  const top3 = baseList.slice(0,3).reduce((s,x) => s+x[1], 0);
-
-  // Si hay proveedores filtrados que SÍ están en el Top (filtrado), mostrar solo esas filas exactas.
-  const matchedInTop = filterProvs.length ? baseList.filter(x => filterProvs.includes(x[0])) : [];
-  const listaAMostrar = filterProvs.length ? matchedInTop : baseList;
-
-  listaAMostrar.forEach((x) => {
-    const i = baseList.findIndex(y => y[0] === x[0]);
-    const pct = (x[1] / total * 100).toFixed(1);
-    const fill = (x[1] / baseList[0][1] * 100).toFixed(0);
-    const isActive = filterProvs.includes(x[0]);
-    el.innerHTML += `
-    <li class="pareto-item${isActive ? ' is-active' : ''}">
-      <span class="pareto-rank">${i+1}</span>
-      <span class="pareto-name">${x[0].length > 26 ? x[0].slice(0,24)+'…' : x[0]}</span>
-      <span class="pareto-val">${fmt(x[1])}</span>
-      <span class="pareto-pct">${pct}%</span>
-      <div class="pareto-bar-wrap"><div class="pareto-bar-fill" style="width:${fill}%;background:${isActive ? COLORS.gold : PALETTE[i % PALETTE.length]}"></div></div>
-    </li>`;
-  });
-
-  // Proveedores filtrados pero fuera del Top filtrado: mostrar su dato exacto igualmente.
-  const outOfTop = filterProvs.filter(p => !matchedInTop.find(x => x[0] === p));
-  outOfTop.forEach(p => {
-    const s = FILTER.topSuppliers.find(x => x.name === p);
-    if (!s) return;
-    const idxs = dateIdxs();
-    const provVal = idxs.length ? idxs.reduce((acc,i) => acc+(s.monthly[i]||0),0) : s.total;
-    const fillPct = baseList[0] ? (provVal/baseList[0][1]*100).toFixed(0) : 0;
-    el.innerHTML += `<li class="pareto-item is-active">
-      <span class="pareto-rank">—</span>
-      <span class="pareto-name">${s.name.length > 26 ? s.name.slice(0,24)+'…' : s.name}</span>
-      <span class="pareto-val">${fmt(provVal)}</span>
-      <span class="pareto-pct">fuera del Top 10</span>
-      <div class="pareto-bar-wrap"><div class="pareto-bar-fill" style="width:${fillPct}%;background:${COLORS.gold}"></div></div>
-    </li>`;
-  });
-
-  if (!filterProvs.length) {
-    el.innerHTML += `<li style="margin-top:10px;padding:10px;background:var(--wine-ghost);border-radius:8px;font-size:0.72rem">
-      <span style="color:var(--text-muted)">Concentración Top 3: </span>
-      <strong style="color:var(--wine)">${(top3/total*100).toFixed(1)}%</strong>
-      <span style="color:var(--text-muted)"> del gasto Top 10</span>
-    </li>`;
-  }
-}
+// La concentración ahora vive dentro de renderTopProv (misma tarjeta).
+function renderConcentracion() {}
 
 // Tendencia histórica completa (18 meses) de los proveedores seleccionados (una línea por c/u)
 function renderTendenciaProveedor() {
