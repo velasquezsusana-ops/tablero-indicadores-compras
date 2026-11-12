@@ -1699,7 +1699,7 @@ footer strong { color: rgba(255,255,255,0.8); }
 <main style="padding:2rem;max-width:1700px;margin:0 auto;">
   <div style="font-size:.72rem;color:var(--text-muted);background:var(--wine-pale);border-radius:8px;padding:.5rem .75rem;margin-bottom:1.25rem;">Fuente: <em>Novedades Producto Puntos de Venta.xlsx</em> &mdash; se procesan &uacute;nicamente los registros del a&ntilde;o <strong>2026</strong> (los de a&ntilde;os anteriores se descartan). Se actualiza desde la pesta&ntilde;a <strong>Actualizar datos</strong>.</div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem;margin-bottom:2rem;">
-    <div class="kpi-card nov-kpi-click" onclick="novKpiOpen('total')" title="Clic para ver el detalle" style="border-left:5px solid var(--wine);">
+    <div class="kpi-card" style="border-left:5px solid var(--wine);">
       <div class="kpi-badge" style="background:var(--wine-pale);color:var(--wine);">Total Novedades</div>
       <div id="nov-kpi-total" class="kpi-val" style="color:var(--wine);font-family:Segoe UI,Arial,sans-serif;font-size:1.75rem;font-weight:700;">&#8212;</div>
       <div id="nov-kpi-total-n" style="font-size:.72rem;color:var(--text-muted);margin-top:.5rem;">reportes en 2026</div>
@@ -9262,7 +9262,7 @@ function novChartProductos(rows){
     var topDef=null,topDefN=0;Object.keys(it.def).forEach(function(k){if(it.def[k]>topDefN){topDefN=it.def[k];topDef=k;}});
     var nPdv=Object.keys(it.pdv).length;
     var col=i<3?"#7A1A2E":"#B5677A";
-    h+='<div onclick="novProdRankOpen('+i+')" title="Clic para ver el detalle" class="nov-rank-row" style="display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:7px 8px;border-radius:8px;cursor:pointer;">';
+    h+='<div class="nov-rank-row" style="display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:7px 8px;border-radius:8px;">';
     h+='<div style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;'+(i<3?'background:#7A1A2E;color:#fff;':'background:rgba(122,26,46,.08);color:#7A1A2E;')+'">'+(i+1)+'</div>';
     h+='<div style="min-width:0;">';
     h+='<div style="font-size:.8rem;font-weight:600;color:var(--charcoal);line-height:1.25;">'+novEsc(it.label)+'</div>';
@@ -9274,13 +9274,8 @@ function novChartProductos(rows){
   });
   h+='</div>';
   if(all.length>items.length)h+='<div style="font-size:.7rem;color:var(--text-muted);margin-top:.5rem;text-align:right;">Top 10 de '+all.length+' productos con novedades</div>';
-  if(!document.getElementById("nov-rank-style")){var s=document.createElement("style");s.id="nov-rank-style";s.textContent=".nov-rank-row:hover{background:var(--wine-pale,#F7EEF0);}";document.head.appendChild(s);}
   cont.innerHTML=h;
 }
-window.novProdRankOpen=function(i){
-  var lbl=novProdRankLabels[i];if(lbl==null)return;
-  novKpiOpen("producto");novKpiState.sel=lbl;novKpiRender();
-};
 function novChartPuntos(rows){
   novBarChart("nov-chart-puntos",novTopCounts(rows,6,20),"#2563EB");
 }
@@ -9423,24 +9418,17 @@ function novKpiRender(){
     h+=novMiniTable("Por tipo de material",novGroup(rows,function(d){return novClasif(d)||"Sin clasificar";}),total,false);
     h+='</div><div style="font-weight:700;font-size:.85rem;color:var(--wine-dark);margin-bottom:.5rem;">Todas las novedades</div>'+novRecordsTable(rows);
   } else {
-    var groups=novGroup(rows,function(d){return d[cfg.idx];});
-    novKpiState.groups=groups;
-    if(novKpiState.sel==null||!groups.some(function(g){return g.label===novKpiState.sel;})) novKpiState.sel=groups.length?groups[0].label:null;
-    var selRows=rows.filter(function(d){return String(d[cfg.idx]||"(Sin dato)")===novKpiState.sel;});
-    h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;align-items:start;">';
-    h+='<div>'+novMiniTable(cfg.col+" (clic para ver)",groups,total,true)+'</div><div style="grid-column:span 2;min-width:0;">';
-    if(novKpiState.sel!=null){
+    // Solo los reportes del valor que muestra la tarjeta (el mas frecuente con los filtros actuales).
+    novKpiState.sel=novMostFrequent(rows,cfg.idx).label;
+    if(novKpiState.sel==null){
+      h+='<div style="padding:1.5rem;text-align:center;color:var(--text-muted);">Sin datos para los filtros seleccionados.</div>';
+    } else {
+      var selRows=rows.filter(function(d){return String(d[cfg.idx])===novKpiState.sel;});
       var cant=selRows.reduce(function(s,d){return s+(Number(d[5])||0);},0);
-      h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem;"><div><div style="font-weight:700;font-size:.95rem;color:var(--wine-dark);">'+novEsc(novKpiState.sel)+'</div><div style="font-size:.72rem;color:var(--text-muted);">'+selRows.length+' reporte(s) · cantidad afectada '+cant.toLocaleString("es-CO")+'</div></div>';
+      h='<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem;"><div><div style="font-weight:700;font-size:1rem;color:var(--wine-dark);">'+novEsc(novKpiState.sel)+'</div><div style="font-size:.75rem;color:var(--text-muted);">'+selRows.length.toLocaleString("es-CO")+' reporte(s) · cantidad afectada '+cant.toLocaleString("es-CO")+'</div></div>';
       h+='<button onclick="novKpiApplyFilter()" style="font-size:.72rem;font-weight:600;padding:6px 12px;border:1px solid rgba(122,26,46,.3);border-radius:8px;background:#fff;color:var(--wine-dark);cursor:pointer;">Filtrar el tablero por este</button></div>';
-      var sub=[];
-      if(cfg.idx!==4) sub.push(novMiniTable("Defectos",novGroup(selRows,function(d){return d[4];}),selRows.length,false));
-      if(cfg.idx!==1) sub.push(novMiniTable("Productos",novGroup(selRows,function(d){return d[1];}),selRows.length,false));
-      if(cfg.idx!==6) sub.push(novMiniTable("Puntos de venta",novGroup(selRows,function(d){return d[6];}),selRows.length,false));
-      h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem;margin-bottom:.75rem;">'+sub.join("")+'</div>';
       h+=novRecordsTable(selRows);
     }
-    h+='</div></div>';
   }
   body.innerHTML=h;
 }
