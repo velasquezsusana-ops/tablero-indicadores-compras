@@ -9229,9 +9229,48 @@ function novDonutChart(containerId,items){
   cont.innerHTML='<div style="display:flex;gap:1.5rem;align-items:center;flex-wrap:wrap;justify-content:center;">'+svg+leg+'</div>';
 }
 
+// Top productos: ranking horizontal con nombre completo, reportes, % del total, defecto principal y puntos afectados.
+var novProdRankLabels=[];
 function novChartProductos(rows){
-  novBarChart("nov-chart-productos",novTopCounts(rows,1,10),"#7A1A2E");
+  var cont=document.getElementById("nov-chart-productos");
+  var m={};
+  rows.forEach(function(d){
+    var k=d[1];if(k==null||k==="")return;k=String(k);
+    if(!m[k])m[k]={label:k,n:0,def:{},pdv:{}};
+    m[k].n++;
+    if(d[4])m[k].def[d[4]]=(m[k].def[d[4]]||0)+1;
+    if(d[6])m[k].pdv[d[6]]=1;
+  });
+  var all=Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){return b.n-a.n;});
+  var items=all.slice(0,10);
+  novProdRankLabels=items.map(function(it){return it.label;});
+  if(!items.length){cont.innerHTML='<div style="padding:1.5rem;color:var(--text-muted);font-size:.82rem;text-align:center;">Sin datos para los filtros seleccionados.</div>';return;}
+  var total=rows.length,max=items[0].n;
+  var h='<div style="display:flex;flex-direction:column;gap:2px;">';
+  items.forEach(function(it,i){
+    var pct=total?it.n/total*100:0,w=max?it.n/max*100:0;
+    var topDef=null,topDefN=0;Object.keys(it.def).forEach(function(k){if(it.def[k]>topDefN){topDefN=it.def[k];topDef=k;}});
+    var nPdv=Object.keys(it.pdv).length;
+    var col=i<3?"#7A1A2E":"#B5677A";
+    h+='<div onclick="novProdRankOpen('+i+')" title="Clic para ver el detalle" class="nov-rank-row" style="display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;padding:7px 8px;border-radius:8px;cursor:pointer;">';
+    h+='<div style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;'+(i<3?'background:#7A1A2E;color:#fff;':'background:rgba(122,26,46,.08);color:#7A1A2E;')+'">'+(i+1)+'</div>';
+    h+='<div style="min-width:0;">';
+    h+='<div style="font-size:.8rem;font-weight:600;color:var(--charcoal);line-height:1.25;">'+novEsc(it.label)+'</div>';
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-top:4px;"><div style="flex:1;height:8px;background:rgba(0,0,0,.05);border-radius:99px;overflow:hidden;"><div style="height:100%;width:'+w.toFixed(1)+'%;background:'+col+';border-radius:99px;"></div></div></div>';
+    h+='<div style="font-size:.68rem;color:var(--text-muted);margin-top:3px;">'+(topDef?'Defecto principal: <strong style="color:#991B1B;">'+novEsc(topDef)+'</strong> ('+topDefN+')':'')+(nPdv?' · '+nPdv+' punto'+(nPdv>1?'s':''):'')+'</div>';
+    h+='</div>';
+    h+='<div style="text-align:right;white-space:nowrap;"><div style="font-size:1.05rem;font-weight:700;color:'+col+';line-height:1;">'+it.n+'</div><div style="font-size:.68rem;color:var(--text-muted);margin-top:2px;">'+pct.toFixed(1)+'%</div></div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  if(all.length>items.length)h+='<div style="font-size:.7rem;color:var(--text-muted);margin-top:.5rem;text-align:right;">Top 10 de '+all.length+' productos con novedades</div>';
+  if(!document.getElementById("nov-rank-style")){var s=document.createElement("style");s.id="nov-rank-style";s.textContent=".nov-rank-row:hover{background:var(--wine-pale,#F7EEF0);}";document.head.appendChild(s);}
+  cont.innerHTML=h;
 }
+window.novProdRankOpen=function(i){
+  var lbl=novProdRankLabels[i];if(lbl==null)return;
+  novKpiOpen("producto");novKpiState.sel=lbl;novKpiRender();
+};
 function novChartPuntos(rows){
   novBarChart("nov-chart-puntos",novTopCounts(rows,6,20),"#2563EB");
 }
