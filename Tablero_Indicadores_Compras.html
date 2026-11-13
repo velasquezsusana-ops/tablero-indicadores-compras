@@ -1673,7 +1673,7 @@ footer strong { color: rgba(255,255,255,0.8); }
 <div id="v-cmp-refs" style="max-height:330px;overflow:auto;border-radius:10px;"></div></div>
 </div>
 </div>
-<div style="display:flex;align-items:center;margin-bottom:1.25rem;"><div style="font-family:Segoe UI,Arial,sans-serif;font-size:1.3rem;font-weight:600;color:var(--wine-dark);display:flex;align-items:center;gap:.6rem;"><span style="display:inline-block;width:4px;height:22px;background:linear-gradient(180deg,var(--wine),var(--wine-light));border-radius:99px;"></span>Cumplimiento por Tipo de Referencia</div></div><div style="font-size:.72rem;color:var(--text-muted);margin-bottom:1.1rem;">Materia Prima (MP), Producto Terminado (PT), Aseo y Químicos (AC), Material de Empaque (EE) e Insumos (Papelería/Menaje/Botiquín: PP, MJ, GM). Usa el resto de filtros activos, independiente del filtro Tipo.</div><div style="overflow-x:auto;margin-bottom:2rem;" id="v-table-tipo"></div><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1.25rem;"><div style="font-family:Segoe UI,Arial,sans-serif;font-size:1.3rem;font-weight:600;color:var(--wine-dark);display:flex;align-items:center;gap:.6rem;"><span style="display:inline-block;width:4px;height:22px;background:linear-gradient(180deg,var(--wine),var(--wine-light));border-radius:99px;"></span>Cumplimiento por Punto de Venta (peor a mejor)</div><div style="display:flex;align-items:center;gap:.5rem;"><span class="filter-label" style="margin:0;">Tipo</span><div class="v-ms" id="v-tipo-quick-ms" style="position:relative;display:inline-block;"><button type="button" class="filter-select v-ms-btn" onclick="vMsToggle('v-tipo-quick')" style="cursor:pointer;text-align:left;min-width:150px;">Todos</button><div class="v-ms-panel" id="v-tipo-quick-panel" style="display:none;position:absolute;top:105%;left:0;z-index:60;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:.5rem;max-height:260px;overflow-y:auto;min-width:220px;"></div></div></div></div><div style="font-size:.72rem;color:var(--text-muted);background:var(--wine-pale);border-radius:8px;padding:.5rem .75rem;margin-bottom:1.25rem;">Nota: <strong>Tocineta X 600 g x 20 und (PT0035)</strong> y <strong>Tocineta X 1000 g (PT0150)</strong> se unen en una sola l&iacute;nea (mismo PDV y mismo d&iacute;a) en toda esta pesta&ntilde;a &mdash; se suman sus cantidades pedidas y recibidas, y el pendiente real se calcula sobre esa suma. Solo cuenta como incumplida si, combinando ambas, de verdad falt&oacute; producto ese d&iacute;a.</div><div style="overflow-x:auto;margin-bottom:2rem;" id="v-table-pdv"></div><div style="display:flex;align-items:center;margin-bottom:1.25rem;"><div style="font-family:Segoe UI,Arial,sans-serif;font-size:1.3rem;font-weight:600;color:var(--wine-dark);display:flex;align-items:center;gap:.6rem;"><span style="display:inline-block;width:4px;height:22px;background:linear-gradient(180deg,var(--wine),var(--wine-light));border-radius:99px;"></span>Productos con más incumplimiento</div></div><div style="overflow-x:auto;margin-bottom:2rem;" id="v-table-prod"></div><div style="display:flex;align-items:center;margin-bottom:1.25rem;"><div style="font-family:Segoe UI,Arial,sans-serif;font-size:1.3rem;font-weight:600;color:var(--wine-dark);display:flex;align-items:center;gap:.6rem;"><span style="display:inline-block;width:4px;height:22px;background:linear-gradient(180deg,var(--wine),var(--wine-light));border-radius:99px;"></span>Ranking de Cumplimiento (peor a mejor)</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem;"><div><div style="font-weight:700;font-size:.85rem;color:var(--wine-dark);margin-bottom:.6rem;">Puntos de Venta</div><div id="v-rank-pdv"></div></div><div><div style="font-weight:700;font-size:.85rem;color:var(--wine-dark);margin-bottom:.6rem;">Referencias</div><div id="v-rank-ref"></div></div></div><div style="display:flex;align-items:center;margin-bottom:1.25rem;"><div style="font-family:Segoe UI,Arial,sans-serif;font-size:1.3rem;font-weight:600;color:var(--wine-dark);display:flex;align-items:center;gap:.6rem;"><span style="display:inline-block;width:4px;height:22px;background:linear-gradient(180deg,var(--wine),var(--wine-light));border-radius:99px;"></span>Detalle (tal cual el Excel)</div></div><div style="overflow-x:auto;" id="v-detail-container"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:2.5rem;"><div style="background:#fff;border-radius:14px;box-shadow:var(--shadow-sm);padding:1.25rem;"><div style="font-family:Segoe UI,Arial,sans-serif;font-size:1rem;font-weight:600;color:var(--wine-dark);margin-bottom:.75rem;">Top 12 PDV — % Incumplimiento de líneas</div><div id="v-chart-pdv"></div></div><div style="background:#fff;border-radius:14px;box-shadow:var(--shadow-sm);padding:1.25rem;"><div style="font-family:Segoe UI,Arial,sans-serif;font-size:1rem;font-weight:600;color:var(--wine-dark);margin-bottom:.75rem;">Evolución mensual — % Cumplimiento líneas vs cantidad</div><div id="v-chart-trend"></div></div></div></main></section>
+<div style="display:flex;align-items:center;margin-bottom:1.25rem;"><div style="font-family:Segoe UI,Arial,sans-serif;font-size:1.3rem;font-weight:600;color:var(--wine-dark);display:flex;align-items:center;gap:.6rem;"><span style="display:inline-block;width:4px;height:22px;background:linear-gradient(180deg,var(--wine),var(--wine-light));border-radius:99px;"></span>Cumplimiento por Tipo de Referencia</div></div><div style="font-size:.72rem;color:var(--text-muted);margin-bottom:1.1rem;">Materia Prima (MP), Producto Terminado (PT), Aseo y Químicos (AC), Material de Empaque (EE) e Insumos (Papelería/Menaje/Botiquín: PP, MJ, GM). Usa el resto de filtros activos, independiente del filtro Tipo.</div><div style="overflow-x:auto;margin-bottom:2rem;" id="v-table-tipo"></div><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1.25rem;"><div style="font-family:Segoe UI,Arial,sans-serif;font-size:1.3rem;font-weight:600;color:var(--wine-dark);display:flex;align-items:center;gap:.6rem;"><span style="display:inline-block;width:4px;height:22px;background:linear-gradient(180deg,var(--wine),var(--wine-light));border-radius:99px;"></span>Cumplimiento por Punto de Venta</div><div style="display:flex;align-items:center;gap:.5rem;"><span class="filter-label" style="margin:0;">Tipo</span><div class="v-ms" id="v-tipo-quick-ms" style="position:relative;display:inline-block;"><button type="button" class="filter-select v-ms-btn" onclick="vMsToggle('v-tipo-quick')" style="cursor:pointer;text-align:left;min-width:150px;">Todos</button><div class="v-ms-panel" id="v-tipo-quick-panel" style="display:none;position:absolute;top:105%;left:0;z-index:60;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:.5rem;max-height:260px;overflow-y:auto;min-width:220px;"></div></div></div></div><div style="font-size:.72rem;color:var(--text-muted);background:var(--wine-pale);border-radius:8px;padding:.5rem .75rem;margin-bottom:1.25rem;">Nota: <strong>Tocineta X 600 g x 20 und (PT0035)</strong> y <strong>Tocineta X 1000 g (PT0150)</strong> se unen en una sola l&iacute;nea (mismo PDV y mismo d&iacute;a) en toda esta pesta&ntilde;a &mdash; se suman sus cantidades pedidas y recibidas, y el pendiente real se calcula sobre esa suma. Solo cuenta como incumplida si, combinando ambas, de verdad falt&oacute; producto ese d&iacute;a.</div><div style="overflow-x:auto;margin-bottom:2rem;" id="v-table-pdv"></div><div style="display:flex;align-items:center;margin-bottom:1.25rem;"><div style="font-family:Segoe UI,Arial,sans-serif;font-size:1.3rem;font-weight:600;color:var(--wine-dark);display:flex;align-items:center;gap:.6rem;"><span style="display:inline-block;width:4px;height:22px;background:linear-gradient(180deg,var(--wine),var(--wine-light));border-radius:99px;"></span>Productos con más incumplimiento</div></div><div style="overflow-x:auto;margin-bottom:2rem;" id="v-table-prod"></div><div style="display:flex;align-items:center;margin-bottom:1.25rem;"><div style="font-family:Segoe UI,Arial,sans-serif;font-size:1.3rem;font-weight:600;color:var(--wine-dark);display:flex;align-items:center;gap:.6rem;"><span style="display:inline-block;width:4px;height:22px;background:linear-gradient(180deg,var(--wine),var(--wine-light));border-radius:99px;"></span>Ranking de Cumplimiento (peor a mejor)</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem;"><div><div style="font-weight:700;font-size:.85rem;color:var(--wine-dark);margin-bottom:.6rem;">Puntos de Venta</div><div id="v-rank-pdv"></div></div><div><div style="font-weight:700;font-size:.85rem;color:var(--wine-dark);margin-bottom:.6rem;">Referencias</div><div id="v-rank-ref"></div></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:2.5rem;"><div style="background:#fff;border-radius:14px;box-shadow:var(--shadow-sm);padding:1.25rem;"><div style="font-family:Segoe UI,Arial,sans-serif;font-size:1rem;font-weight:600;color:var(--wine-dark);margin-bottom:.75rem;">Top 12 PDV — % Incumplimiento de líneas</div><div id="v-chart-pdv"></div></div><div style="background:#fff;border-radius:14px;box-shadow:var(--shadow-sm);padding:1.25rem;"><div style="font-family:Segoe UI,Arial,sans-serif;font-size:1rem;font-weight:600;color:var(--wine-dark);margin-bottom:.75rem;">Evolución mensual — % Cumplimiento líneas vs cantidad</div><div id="v-chart-trend"></div></div></div></main></section>
 
 <!-- ══ TAB NOVEDADES DE CALIDAD ══ -->
 <div id="tab-novedades" class="tab-panel"><div class="filter-bar">
@@ -8197,7 +8197,6 @@ function vSortClick(tableId,colIdx){
   else if(tableId==="v-table-pdv") vTablePdv(r);
   else if(tableId==="v-rank-pdv") vRankPdv(r);
   else if(tableId==="v-rank-ref") vRankRef(r);
-  else if(tableId==="v-detail"){ vDetailPage=0; vDetailRender(r); }
   else if(tableId.indexOf("v-table-prod-")===0) vTableProd(r);
 }
 window.vSortClick=vSortClick;
@@ -8222,14 +8221,16 @@ function vPdvDetailPanel(pdvRows){
     h+='<div style="font-weight:700;font-size:.8rem;color:var(--wine-dark);margin-bottom:.5rem;">Líneas incumplidas (mayor a menor pendiente) &mdash; con seguimiento de reposici&oacute;n</div>';
     h+='<div style="max-height:420px;overflow-y:auto;overflow-x:auto;border-radius:8px;"><table style="width:100%;border-collapse:collapse;background:#fff;font-size:.74rem;">';
     h+='<thead><tr>';
-    ["Fecha Pedido","Referencia","Tipo","Descripción","Cant. Pedida","Cant. Picking","Pendientes"].forEach(function(t,i){
-      h+='<th style="position:sticky;top:0;background:rgba(122,26,46,0.9);color:#fff;font-size:.62rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:7px 9px;text-align:'+(i<=3?'left':'center')+';white-space:nowrap;">'+t+'</th>';
+    ["Fecha Pedido","Pedido","Doc. ERP","Referencia","Tipo","Descripción","Cant. Pedida","Cant. Picking","Pendientes"].forEach(function(t,i){
+      h+='<th style="position:sticky;top:0;background:rgba(122,26,46,0.9);color:#fff;font-size:.62rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:7px 9px;text-align:'+(i<=5?'left':'center')+';white-space:nowrap;">'+t+'</th>';
     });
     h+='</tr></thead><tbody>';
     incumplidas.forEach(function(d,i){
       var bg=i%2?'#FBF7F3':'#fff';
       h+='<tr>';
       h+='<td style="padding:6px 9px;border-bottom:1px solid rgba(0,0,0,.05);font-family:Segoe UI,Arial,sans-serif;background:'+bg+';white-space:nowrap;">'+(d[3]||'—')+'</td>';
+      h+='<td style="padding:6px 9px;border-bottom:1px solid rgba(0,0,0,.05);font-family:Segoe UI,Arial,sans-serif;background:'+bg+';white-space:nowrap;">'+(d[11]==null||d[11]===''?'—':d[11])+'</td>';
+      h+='<td style="padding:6px 9px;border-bottom:1px solid rgba(0,0,0,.05);font-family:Segoe UI,Arial,sans-serif;background:'+bg+';white-space:nowrap;">'+(d[15]==null||d[15]===''?'—':d[15])+'</td>';
       h+='<td style="padding:6px 9px;border-bottom:1px solid rgba(0,0,0,.05);font-family:Segoe UI,Arial,sans-serif;background:'+bg+';">'+d[4]+'</td>';
       h+='<td style="padding:6px 9px;border-bottom:1px solid rgba(0,0,0,.05);background:'+bg+';">'+vTipoBadge(d[4])+'</td>';
       h+='<td style="padding:6px 9px;border-bottom:1px solid rgba(0,0,0,.05);background:'+bg+';max-width:220px;">'+d[5]+'</td>';
@@ -8484,64 +8485,6 @@ function vChartTrend(rows){
   document.getElementById("v-chart-trend").innerHTML= cats.length? svgGroupedBars(cats,series,{height:280}) : "<div style=\"color:var(--text-muted);font-size:.82rem;padding:1rem;text-align:center;\">Sin datos para los filtros seleccionados</div>";
 }
 
-// ===================== Detalle tal cual el Excel (paginado) =====================
-var vDetailPage = 0;
-var vDetailPageSize = 50;
-function vDetailHeader(){
-  var cols=["Picking","Pedido","PDV","doctoERP","EAN","Referencia","Descripción","Cant. Pedida","Qty Comprometida","Cant. Picking","Pendientes","Fecha Picking","Fecha Pedido","Observación"];
-  var h='<tr>';
-  cols.forEach(function(t,i){
-    h+=vSortTh("v-detail",i,t,'background:rgba(122,26,46,0.85);color:#fff;font-size:.65rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:8px 10px;text-align:'+(i>=7&&i<=10?'right':'left')+';white-space:nowrap;');
-  });
-  return h+'</tr>';
-}
-var V_DETAIL_EXTRACTORS=[
-  function(d){return d[10]==null?"":d[10];},function(d){return d[11]==null?"":d[11];},function(d){return vPdvLabel(d[0]);},
-  function(d){return d[15]||"";},function(d){return d[14]==null?"":d[14];},function(d){return d[4]||"";},function(d){return d[5]||"";},
-  function(d){return Number(d[6])||0;},function(d){return Number(d[9])||0;},function(d){return Number(d[7])||0;},function(d){return Number(d[8])||0;},
-  function(d){return d[12]||"";},function(d){return d[3]||"";},function(d){return d[13]||"";}
-];
-function vDetailRow(d,bg){
-  var cellsL=[d[10],d[11],vPdvLabel(d[0]),d[15],d[14],d[4]];
-  var desc=d[5];
-  var cellsR=[vcn(d[6]),vcn(d[9]),vcn(d[7]),vcn(d[8])];
-  var cellsD=[d[12]||"—",d[3],d[13]||"—"];
-  var h='<tr>';
-  cellsL.forEach(function(v){h+='<td style="padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-family:Segoe UI,Arial,sans-serif;font-size:.74rem;background:'+bg+';white-space:nowrap;">'+v+'</td>';});
-  h+='<td style="padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-family:Segoe UI,Arial,sans-serif;font-size:.76rem;background:'+bg+';max-width:260px;">'+desc+'</td>';
-  var pendColor = d[8]>0? '#B91C1C' : '#15803D';
-  var pendNote = '';
-  h+='<td style="padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-family:Segoe UI,Arial,sans-serif;font-size:.74rem;text-align:right;background:'+bg+';">'+cellsR[0]+'</td>';
-  h+='<td style="padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-family:Segoe UI,Arial,sans-serif;font-size:.74rem;text-align:right;background:'+bg+';">'+cellsR[1]+'</td>';
-  h+='<td style="padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-family:Segoe UI,Arial,sans-serif;font-size:.74rem;text-align:right;background:'+bg+';">'+cellsR[2]+'</td>';
-  h+='<td style="padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-family:Segoe UI,Arial,sans-serif;font-size:.74rem;text-align:right;font-weight:700;color:'+pendColor+';background:'+bg+';">'+cellsR[3]+pendNote+'</td>';
-  h+='<td style="padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-family:Segoe UI,Arial,sans-serif;font-size:.72rem;background:'+bg+';white-space:nowrap;">'+cellsD[0]+'</td>';
-  h+='<td style="padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-family:Segoe UI,Arial,sans-serif;font-size:.72rem;background:'+bg+';white-space:nowrap;">'+cellsD[1]+'</td>';
-  h+='<td style="padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-family:Segoe UI,Arial,sans-serif;font-size:.72rem;background:'+bg+';">'+cellsD[2]+'</td>';
-  return h+'</tr>';
-}
-function vDetailRender(rows){
-  rows=vSortRows("v-detail",rows,V_DETAIL_EXTRACTORS);
-  var totalPages=Math.max(1,Math.ceil(rows.length/vDetailPageSize));
-  if(vDetailPage>=totalPages) vDetailPage=totalPages-1;
-  if(vDetailPage<0) vDetailPage=0;
-  var startI=vDetailPage*vDetailPageSize;
-  var pageRows=rows.slice(startI,startI+vDetailPageSize);
-  var h='<table style="width:100%;border-collapse:collapse;background:#fff;box-shadow:var(--shadow-sm);border-radius:14px 14px 0 0;overflow:hidden;font-size:.76rem;"><thead>'+vDetailHeader()+'</thead><tbody>';
-  pageRows.forEach(function(d,i){h+=vDetailRow(d,i%2==0?'#fff':'#FBF7F3');});
-  if(!pageRows.length){h+='<tr><td colspan="14" style="padding:2rem;text-align:center;color:var(--text-muted);">Sin filas para los filtros seleccionados</td></tr>';}
-  h+='</tbody></table>';
-  h+='<div style="display:flex;align-items:center;justify-content:space-between;background:#fff;padding:10px 16px;border-radius:0 0 14px 14px;box-shadow:var(--shadow-sm);border-top:1px solid rgba(0,0,0,.06);">';
-  h+='<span style="font-size:.75rem;color:var(--text-muted);">Mostrando '+(pageRows.length? (startI+1):0)+'–'+(startI+pageRows.length)+' de '+vcn(rows.length)+' líneas</span>';
-  h+='<div style="display:flex;gap:.5rem;align-items:center;">';
-  h+='<button onclick="vDetailPrev()" style="font-family:Segoe UI,Arial,sans-serif;font-size:.75rem;font-weight:600;padding:6px 12px;border:1px solid rgba(122,26,46,.25);border-radius:8px;background:#fff;color:var(--wine-dark);cursor:pointer;">&larr; Anterior</button>';
-  h+='<span style="font-family:Segoe UI,Arial,sans-serif;font-size:.75rem;color:var(--wine-dark);">Página '+(vDetailPage+1)+' / '+totalPages+'</span>';
-  h+='<button onclick="vDetailNext()" style="font-family:Segoe UI,Arial,sans-serif;font-size:.75rem;font-weight:600;padding:6px 12px;border:1px solid rgba(122,26,46,.25);border-radius:8px;background:#fff;color:var(--wine-dark);cursor:pointer;">Siguiente &rarr;</button>';
-  h+='</div></div>';
-  document.getElementById("v-detail-container").innerHTML=h;
-}
-window.vDetailPrev=function(){vDetailPage--;vDetailRender(vRows());};
-window.vDetailNext=function(){vDetailPage++;vDetailRender(vRows());};
 
 // ============ Faltantes: comparación mes vs mes ============
 // Igual que vRows() pero sin Año/Mes/Semana, para poder comparar meses en la misma gráfica.
@@ -8644,8 +8587,6 @@ function vApply(){
   vRankRef(r);
   vChartPdv(r);
   vChartTrend(r);
-  vDetailPage=0;
-  vDetailRender(r);
 }
 
 window.vApply=vApply;
