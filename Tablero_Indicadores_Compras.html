@@ -5900,7 +5900,7 @@ function initSortableTables() {
 // deja los demás archivos guardados para conectarlos en próximas fases.
 // ══════════════════════════════════════════════════════════════════════════
 const ACTUALIZAR_FILES = [
-  { id: 'ahorros',   label: 'Ahorros a Septiembre',            filename: 'AHORROS A SEPT.xlsx',              desc: 'Hoja "RESUMEN" — alimenta la pestaña Negociaciones (ahorros por producto).' },
+  { id: 'ahorros',   label: 'Ahorros a Septiembre',            filename: 'AHORROS A SEPT.xlsx', patron: /^ahorros a .*\.xlsx$/, desc: 'Hoja "RESUMEN" — alimenta la pestaña Negociaciones (ahorros por producto).' },
   { id: 'picking',   label: 'Diferencia de pedidos',           filename: 'dif pedidos.xlsx', alias: ['dif picking.xlsx'], desc: 'Pedidos vs. lo enviado a cada punto de venta (Siesa). Suma las fechas del archivo al histórico, sin borrar lo anterior. También se puede llamar "dif picking.xlsx" (el mismo archivo que usa Producción).' },
   { id: 'historico', label: 'Histórico de compras por ítem',   filename: 'Histórico de compras por item.xlsx', alias: ['histórico de compras por item.xlsb'], desc: 'Entregas reales por ítem — alimenta OTIF, Tendencias, Proveedores e Ítems.' },
   { id: 'orden',     label: 'Orden de compra por ítem',        filename: 'Orden de compra por item.xlsx',    desc: 'Líneas de orden de compra — alimenta OTIF y Órdenes de Compra.' },
@@ -7628,7 +7628,7 @@ async function comprasTryAutoLoadFromDisk(silent, force) {
     for await (const handle of dirHandle.values()) {
       if (handle.kind !== 'file') continue;
       const name = handle.name.trim().toLowerCase();
-      const match = ACTUALIZAR_FILES.find(f => f.filename.trim().toLowerCase() === name || (f.alias || []).includes(name));
+      const match = ACTUALIZAR_FILES.find(f => f.filename.trim().toLowerCase() === name || (f.alias || []).includes(name) || (f.patron && f.patron.test(name)));
       // si están los dos nombres (ej. "dif pedidos" y "dif picking"), se usa el modificado más recientemente
       if (match && found[match.id]) {
         const [a, b] = await Promise.all([found[match.id].getFile(), handle.getFile()]);
