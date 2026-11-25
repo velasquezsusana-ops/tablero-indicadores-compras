@@ -2243,7 +2243,8 @@ function renderKPIs() {
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>` },
     { label: 'Lead Time Promedio', val: ltReal.toFixed(1)+' días', sub: ltPctOn.toFixed(1)+'% entregas a tiempo · '+ltCount.toLocaleString('es-CO')+' OC con docto.', badge: ltPctOn.toFixed(1)+'% On-Time', pill: ltPill,
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>` },
-    { label: 'OC Pendiente de Recibir', val: ocPend, sub: ocVencidas.toLocaleString('es-CO')+' OC vencidas · '+info.label, badge: 'Requiere gestión', pill: 'pill-red',
+    { label: 'OC Pendiente de Recibir', val: ocPend, sub: ocVencidas.toLocaleString('es-CO')+' OC vencidas · '+info.label, badge: 'Requiere gestión · ver detalle', pill: 'pill-red',
+      onclick: 'ocPendOpen()', title: 'Clic para ver qué está pendiente por recibir',
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>` },
   ];
 
@@ -2251,7 +2252,7 @@ function renderKPIs() {
   container.innerHTML = '';
   cards.forEach(c => {
     container.innerHTML += `
-      <div class="kpi-card${c.featured ? ' featured' : ''}">
+      <div class="kpi-card${c.featured ? ' featured' : ''}"${c.onclick ? ` onclick="${c.onclick}" title="${c.title || ''}" style="cursor:pointer"` : ''}>
         <div class="kpi-icon">${c.icon}</div>
         <div class="kpi-label">${c.label}</div>
         <div class="kpi-val">${c.val}</div>
@@ -2570,12 +2571,13 @@ function renderTipoMensualTabla(series, idxs) {
 // Paleta propia del gráfico 21: 10 colores bien distintos entre sí (la PALETTE general
 // es casi toda tonos vino/dorado/café y en barras apiladas no se distinguen).
 // Cada tipo de producto tiene siempre el mismo color, aunque cambien los filtros.
-const TIPO_MENSUAL_COLORS = ['#1F77B4','#FF7F0E','#2CA02C','#D62728','#9467BD',
-                             '#8C564B','#E377C2','#17BECF','#BCBD22','#7F7F7F'];
+// Tonos sobrios que combinan con el vino/dorado del tablero, pero de matiz bien separado.
+const TIPO_MENSUAL_COLORS = ['#7A1A2E','#E08A2E','#2B2B2B','#3E6A8F','#5B8A57',
+                             '#2E8C8A','#7B5C99','#D08A9A','#A39C94','#E6C440'];
 const TIPO_MENSUAL_COLOR_BY_TIPO = {
-  'Dotación':'#1F77B4', 'Repuestos':'#FF7F0E', 'Aseo y cafetería':'#2CA02C',
-  'Material de empaque':'#D62728', 'Menaje':'#9467BD', 'Botiquín':'#E377C2',
-  'Materias primas e insumos':'#8C564B', 'Bebidas':'#17BECF', 'Otros':'#7F7F7F'
+  'Materias primas e insumos':'#7A1A2E', 'Dotación':'#E08A2E', 'Repuestos':'#2B2B2B',
+  'Material de empaque':'#3E6A8F', 'Aseo y cafetería':'#5B8A57', 'Menaje':'#2E8C8A',
+  'Botiquín':'#7B5C99', 'Bebidas':'#D08A9A', 'Otros':'#A39C94'
 };
 function renderTipoMensual() {
   destroyChart('ch-tipo-mensual');
@@ -3233,6 +3235,58 @@ function renderOcPendTable() {
   </tr>`).join('');
   vtApplyCollapse('oc-pend-tbody', 5);
 }
+
+// Ventana de detalle de la tarjeta "OC Pendiente de Recibir" (Resumen): las mismas líneas
+// que suman el valor de la tarjeta (ocPendFiltradas, con los filtros activos), vencidas primero.
+function ocPendEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function ocPendEnsureModal() {
+  if (document.getElementById('oc-pend-modal')) return;
+  const m = document.createElement('div');
+  m.id = 'oc-pend-modal';
+  m.style.cssText = 'display:none;position:fixed;inset:0;z-index:1000;background:rgba(30,10,18,.45);align-items:flex-start;justify-content:center;padding:4vh 16px;overflow-y:auto;';
+  m.innerHTML = '<div style="background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:100%;max-width:1200px;padding:1.25rem 1.5rem;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;"><div style="font-size:1.15rem;font-weight:700;color:var(--wine-dark);">OC Pendiente de Recibir — Detalle</div>'
+    + '<button onclick="ocPendClose()" title="Cerrar (Esc)" style="border:none;background:none;font-size:1.6rem;line-height:1;cursor:pointer;color:var(--wine-dark);">&times;</button></div>'
+    + '<div id="oc-pend-modal-body"></div></div>';
+  m.addEventListener('click', e => { if (e.target === m) ocPendClose(); });
+  document.body.appendChild(m);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') ocPendClose(); });
+}
+window.ocPendOpen = function() {
+  ocPendEnsureModal();
+  const rows = ocPendFiltradas().slice().sort((a, b) => (ocDiasAtraso(b) - ocDiasAtraso(a)) || ((b.valorPend || 0) - (a.valorPend || 0)));
+  const venc = rows.filter(r => ocDiasAtraso(r) > 0);
+  const totVal = rows.reduce((a, r) => a + (r.valorPend || 0), 0);
+  const totVenc = venc.reduce((a, r) => a + (r.valorPend || 0), 0);
+  const nOc = new Set(rows.map(r => r.nro)).size;
+  const filtros = [filterProvs.length ? 'Proveedor: ' + provLabel() : '', filterItems.length ? 'Ítem: ' + itemLabel() : '',
+    filterBodegas.length ? 'Bodega: ' + bodegaLabel() : '', dateIdxs().length ? 'Período: ' + getActiveInfo().label : ''].filter(Boolean).join(' · ');
+  const box = (lbl, val) => `<div style="flex:1;min-width:150px;background:var(--wine-ghost);border-radius:10px;padding:.6rem .8rem"><div style="font-size:.7rem;color:var(--text-light);text-transform:uppercase;letter-spacing:.04em">${lbl}</div><div style="font-size:1.05rem;font-weight:700;color:var(--wine-dark)">${val}</div></div>`;
+  let h = `<div style="font-size:.78rem;color:var(--text-light);margin-bottom:.75rem">${filtros ? 'Filtros activos: ' + ocPendEsc(filtros) : 'Sin filtros: todas las órdenes abiertas (Aprobado, Parcial o En elaboración) con mercancía pendiente'}. Ordenado de mayor a menor atraso.</div>`;
+  h += `<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem">${box('Valor pendiente', fmt(Math.round(totVal / 1e5) / 10))}${box('Órdenes de compra', nOc.toLocaleString('es-CO'))}${box('Líneas pendientes', rows.length.toLocaleString('es-CO'))}${box('Líneas vencidas', venc.length.toLocaleString('es-CO') + ' · ' + fmt(Math.round(totVenc / 1e5) / 10))}</div>`;
+  if (!rows.length) {
+    h += '<div style="padding:1.5rem;text-align:center;color:var(--text-light)">No hay nada pendiente por recibir con los filtros seleccionados.</div>';
+  } else {
+    const th = 'style="position:sticky;top:0;background:#fff;z-index:1"';
+    h += `<div style="max-height:60vh;overflow:auto"><table class="data-table"><thead><tr>
+      <th ${th}>Nro OC</th><th ${th}>Proveedor</th><th ${th}>Ítem</th><th ${th}>Bodega</th><th ${th}>Cant. Pendiente</th>
+      <th ${th}>Fecha Orden</th><th ${th}>Fecha Entrega</th><th ${th}>Días Atraso</th><th ${th}>Valor Pendiente</th><th ${th}>Comprador</th></tr></thead><tbody>`
+      + rows.map(r => { const d = ocDiasAtraso(r); return `<tr>
+        <td>${ocPendEsc(r.nro)}</td><td>${ocPendEsc(r.prov)}</td><td>${ocPendEsc(r.item)}</td><td>${ocPendEsc(r.bodega)}</td>
+        <td class="num">${(r.cantPend || 0).toLocaleString('es-CO')} ${ocPendEsc(r.um)}</td>
+        <td class="num">${r.fechaOrden || '–'}</td><td class="num">${r.fechaEntrega || '–'}</td>
+        <td class="num ${d > 0 ? 'var-up' : 'var-down'}">${d > 0 ? d : 'A tiempo'}</td>
+        <td class="num">${fmtM(r.valorPend)}</td><td>${ocPendEsc(r.comprador)}</td></tr>`; }).join('')
+      + `</tbody><tfoot><tr style="font-weight:700;background:var(--wine-ghost)"><td colspan="8">TOTAL</td><td class="num">${fmtM(totVal)}</td><td></td></tr></tfoot></table></div>`;
+  }
+  document.getElementById('oc-pend-modal-body').innerHTML = h;
+  document.getElementById('oc-pend-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+};
+window.ocPendClose = function() {
+  const m = document.getElementById('oc-pend-modal');
+  if (m && m.style.display !== 'none') { m.style.display = 'none'; document.body.style.overflow = ''; }
+};
 
 function renderOcsTab() { renderEstadoOC(); renderFulfillment(); renderEstadoFacturas(); renderAlertas(); renderOcPendTable(); }
 
