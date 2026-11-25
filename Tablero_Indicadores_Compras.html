@@ -2567,6 +2567,16 @@ function renderTipoMensualTabla(series, idxs) {
   const tot = series.map(x => x.data.reduce((a,v) => a+v, 0));
   tfoot.innerHTML = `<tr style="font-weight:700;background:var(--wine-ghost)"><td>TOTAL</td>${tot.map(v => `<td class="num">${fmt(v)}</td>`).join('')}<td class="num">${fmt(tot.reduce((a,v) => a+v, 0))}</td></tr>`;
 }
+// Paleta propia del gráfico 21: 10 colores bien distintos entre sí (la PALETTE general
+// es casi toda tonos vino/dorado/café y en barras apiladas no se distinguen).
+// Cada tipo de producto tiene siempre el mismo color, aunque cambien los filtros.
+const TIPO_MENSUAL_COLORS = ['#1F77B4','#FF7F0E','#2CA02C','#D62728','#9467BD',
+                             '#8C564B','#E377C2','#17BECF','#BCBD22','#7F7F7F'];
+const TIPO_MENSUAL_COLOR_BY_TIPO = {
+  'Dotación':'#1F77B4', 'Repuestos':'#FF7F0E', 'Aseo y cafetería':'#2CA02C',
+  'Material de empaque':'#D62728', 'Menaje':'#9467BD', 'Botiquín':'#E377C2',
+  'Materias primas e insumos':'#8C564B', 'Bebidas':'#17BECF', 'Otros':'#7F7F7F'
+};
 function renderTipoMensual() {
   destroyChart('ch-tipo-mensual');
   const canvas = document.getElementById('ch-tipo-mensual');
@@ -2596,7 +2606,8 @@ function renderTipoMensual() {
     type: 'bar',
     data: { labels: idxs.map(i => monthsLbl[i]),
       datasets: series.map((x,n) => ({ label: x.k.length > 34 ? x.k.slice(0,32)+'…' : x.k, data: x.data,
-        backgroundColor: PALETTE[n % PALETTE.length], borderRadius: 2, stack: 's' })) },
+        backgroundColor: (!porItem && TIPO_MENSUAL_COLOR_BY_TIPO[x.k]) || TIPO_MENSUAL_COLORS[n % TIPO_MENSUAL_COLORS.length],
+        borderColor: '#fff', borderWidth: 1, borderRadius: 2, stack: 's' })) },
     options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
       tooltip: { ...TOOLTIP_BASE, mode: 'index', intersect: false, filter: c => c.raw,
         callbacks: { label: c => c.dataset.label + ': ' + fmt(c.raw),
